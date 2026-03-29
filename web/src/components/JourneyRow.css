@@ -3,19 +3,19 @@
   align-items: center;
   gap: 12px;
   padding: 12px 16px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid var(--row-border);
   transition: background-color 0.2s ease;
   animation: rowFadeIn 0.3s ease;
 }
 
 .journey-row:hover {
-  background-color: rgba(255, 255, 255, 0.04);
+  background-color: var(--row-hover);
 }
 
 .journey-row.cancelled {
   opacity: 0.5;
   text-decoration: line-through;
-  text-decoration-color: rgba(255, 255, 255, 0.3);
+  text-decoration-color: var(--cancelled-line);
 }
 
 @keyframes rowFadeIn {
@@ -56,12 +56,12 @@
 
 .delay-late {
   color: var(--sbb-red);
-  background: rgba(235, 0, 0, 0.12);
+  background: var(--delay-late-bg);
 }
 
 .delay-early {
   color: var(--green);
-  background: rgba(46, 204, 113, 0.12);
+  background: var(--delay-early-bg);
 }
 
 /* Service badge */
@@ -109,7 +109,7 @@
 }
 
 .badge-default {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--badge-default-bg);
   color: var(--text-secondary);
 }
 
@@ -137,7 +137,7 @@
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--sbb-red);
-  background: rgba(235, 0, 0, 0.12);
+  background: var(--delay-late-bg);
   padding: 2px 6px;
   border-radius: 4px;
   flex-shrink: 0;
@@ -163,7 +163,7 @@
 
 .journey-platform-old {
   text-decoration: line-through;
-  text-decoration-color: rgba(255, 255, 255, 0.4);
+  text-decoration-color: var(--platform-strike);
   opacity: 0.5;
   font-size: 0.8rem;
 }
