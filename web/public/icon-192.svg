@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192" viewBox="0 0 192 192">
+  <!-- Background -->
+  <rect width="192" height="192" rx="36" fill="#0a0e1a"/>
+  
+  <!-- Train body -->
+  <rect x="48" y="52" width="96" height="72" rx="12" fill="#ffffff"/>
+  
+  <!-- Window row -->
+  <rect x="58" y="62" width="28" height="22" rx="4" fill="#0a0e1a"/>
+  <rect x="106" y="62" width="28" height="22" rx="4" fill="#0a0e1a"/>
+  
+  <!-- Red stripe across train body -->
+  <rect x="48" y="92" width="96" height="8" fill="#EB0000"/>
+  
+  <!-- Door -->
+  <rect x="88" y="62" width="16" height="38" rx="3" fill="#0a0e1a"/>
+  
+  <!-- Wheels -->
+  <circle cx="72" cy="132" r="8" fill="#ffffff"/>
+  <circle cx="120" cy="132" r="8" fill="#ffffff"/>
+  <circle cx="72" cy="132" r="4" fill="#0a0e1a"/>
+  <circle cx="120" cy="132" r="4" fill="#0a0e1a"/>
+  
+  <!-- Rail -->
+  <rect x="32" y="138" width="128" height="4" rx="2" fill="#EB0000"/>
+  
+  <!-- Headlight -->
+  <circle cx="148" cy="76" r="5" fill="#f0c040"/>
+</svg>
