@@ -145,7 +145,6 @@ export default function App() {
   }, []);
 
   const handleOpenBookmarks = useCallback(() => {
-    setMenuOpen(false);
     setNavStack((prev) => [...prev, { view: 'bookmarks' }]);
   }, []);
 
@@ -233,6 +232,18 @@ export default function App() {
               </svg>
             </div>
 
+            {/* Bookmarks button */}
+            <button
+              className="header-icon-btn"
+              onClick={handleOpenBookmarks}
+              aria-label="Bookmarks"
+              id="header-bookmarks-btn"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+              </svg>
+            </button>
+
             {/* 3-dot overflow menu */}
             <div className="overflow-menu-wrap" ref={menuRef}>
               <button
@@ -251,17 +262,6 @@ export default function App() {
 
               {menuOpen && (
                 <div className="overflow-menu" role="menu" id="overflow-menu">
-                  <button
-                    className="overflow-menu-item"
-                    role="menuitem"
-                    id="menu-bookmarks"
-                    onClick={handleOpenBookmarks}
-                  >
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
-                    </svg>
-                    Bookmarks
-                  </button>
                   <button
                     className="overflow-menu-item"
                     role="menuitem"

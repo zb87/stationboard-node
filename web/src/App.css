@@ -237,6 +237,35 @@ body {
   pointer-events: none;
 }
 
+/* ===== Header Icon Button ===== */
+.header-icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.header-icon-btn:hover {
+  background: var(--btn-hover-bg);
+  color: var(--text-primary);
+}
+
+.header-icon-btn:active {
+  transform: scale(0.93);
+}
+
+.header-icon-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
 /* ===== Overflow Menu ===== */
 .overflow-menu-wrap {
   position: relative;
