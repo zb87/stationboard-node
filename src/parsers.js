@@ -122,6 +122,16 @@ function parseTripInfoResult(tripResult) {
     stops.push(parseCallAtStop(call));
   }
 
+  // Include the current stop (where the train is right now)
+  if (tripResult.CurrentCall) {
+    const currentList = Array.isArray(tripResult.CurrentCall)
+      ? tripResult.CurrentCall
+      : [tripResult.CurrentCall];
+    for (const call of currentList) {
+      stops.push(parseCallAtStop(call));
+    }
+  }
+
   const onwardCalls = tripResult.OnwardCall || [];
   const onwardList = Array.isArray(onwardCalls) ? onwardCalls : [onwardCalls];
   for (const call of onwardList) {

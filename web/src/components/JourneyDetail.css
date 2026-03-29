@@ -1,0 +1,350 @@
+/* ===== Journey Detail View ===== */
+.journey-detail {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ── Back button header ── */
+.journey-detail-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-header);
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+.journey-detail-back {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 10px;
+  background: var(--btn-bg);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.journey-detail-back:hover {
+  background: var(--btn-hover-bg);
+}
+
+.journey-detail-back:active {
+  transform: scale(0.93);
+}
+
+.journey-detail-back svg {
+  width: 20px;
+  height: 20px;
+}
+
+.journey-detail-title-group {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.journey-detail-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.journey-detail-subtitle {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-top: 2px;
+}
+
+/* ── Stops list ── */
+.journey-stops-scroll {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) transparent;
+  padding: 8px 0 24px;
+}
+
+.journey-stops-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.journey-stops-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.journey-stops-scroll::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 3px;
+}
+
+/* ── Individual stop row ── */
+.stop-row {
+  display: flex;
+  align-items: stretch;
+  padding: 0 16px;
+  min-height: 56px;
+  animation: stopRowFadeIn 0.35s ease both;
+}
+
+@keyframes stopRowFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.stop-row.cancelled {
+  opacity: 0.4;
+}
+
+/* Time column */
+.stop-time-col {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  width: 68px;
+  flex-shrink: 0;
+  padding: 8px 0;
+  gap: 1px;
+}
+
+.stop-time-group {
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+}
+
+.stop-time {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: 0.02em;
+}
+
+.stop-time.muted {
+  color: var(--text-muted);
+  font-weight: 500;
+  font-size: 0.82rem;
+}
+
+.stop-delay {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  font-weight: 700;
+  border-radius: 3px;
+  padding: 0px 3px;
+}
+
+/* ── Timeline column ── */
+.stop-timeline-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 32px;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.stop-timeline-line-top,
+.stop-timeline-line-bottom {
+  width: 2px;
+  flex: 1;
+  background: var(--text-muted);
+  opacity: 0.35;
+}
+
+.stop-row:first-child .stop-timeline-line-top {
+  background: transparent;
+}
+
+.stop-row:last-child .stop-timeline-line-bottom {
+  background: transparent;
+}
+
+.stop-timeline-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid var(--text-muted);
+  background: var(--bg-secondary);
+  flex-shrink: 0;
+  z-index: 2;
+  transition: all 0.3s ease;
+}
+
+.stop-timeline-dot.active {
+  width: 14px;
+  height: 14px;
+  border-color: var(--sbb-red);
+  background: var(--sbb-red);
+  box-shadow: 0 0 8px rgba(235, 0, 0, 0.4), 0 0 20px rgba(235, 0, 0, 0.15);
+}
+
+/* Past stops: solid filled dots */
+.stop-row.past .stop-timeline-dot {
+  background: var(--text-muted);
+  opacity: 0.7;
+}
+
+.stop-row.past .stop-timeline-line-top,
+.stop-row.past .stop-timeline-line-bottom {
+  opacity: 0.6;
+}
+
+/* Future stops: hollow dots */
+.stop-row.future .stop-timeline-dot {
+  background: var(--bg-secondary);
+}
+
+/* ── Info column ── */
+.stop-info-col {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0 10px 10px;
+  min-width: 0;
+  gap: 8px;
+}
+
+.stop-station-name {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stop-row.muted-stop .stop-station-name {
+  font-weight: 400;
+  color: var(--text-secondary);
+}
+
+.stop-platform {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.stop-platform-label {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-right: 2px;
+}
+
+/* ── Train position indicator between stops ── */
+.stop-train-position {
+  display: flex;
+  align-items: stretch;
+  padding: 0 16px;
+  height: 0;
+  position: relative;
+}
+
+.stop-train-position .stop-timeline-col {
+  position: relative;
+}
+
+.train-position-dot {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--sbb-red);
+  box-shadow: 0 0 8px rgba(235, 0, 0, 0.5), 0 0 20px rgba(235, 0, 0, 0.2);
+  z-index: 5;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  animation: trainPulse 2s ease-in-out infinite;
+}
+
+@keyframes trainPulse {
+  0%, 100% {
+    box-shadow: 0 0 8px rgba(235, 0, 0, 0.5), 0 0 20px rgba(235, 0, 0, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 14px rgba(235, 0, 0, 0.7), 0 0 30px rgba(235, 0, 0, 0.3);
+  }
+}
+
+/* ── Loading & error states ── */
+.journey-detail-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 64px 16px;
+  color: var(--text-muted);
+  font-size: 0.92rem;
+}
+
+.journey-detail-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  margin: 16px 16px;
+  background: rgba(235, 0, 0, 0.1);
+  border: 1px solid rgba(235, 0, 0, 0.25);
+  border-radius: 10px;
+  color: var(--sbb-red);
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+/* Mobile adjustments */
+@media (max-width: 480px) {
+  .stop-row {
+    padding: 0 12px;
+    min-height: 48px;
+  }
+
+  .stop-time-col {
+    width: 60px;
+  }
+
+  .stop-time {
+    font-size: 0.82rem;
+  }
+
+  .stop-station-name {
+    font-size: 0.85rem;
+  }
+
+  .stop-info-col {
+    padding-left: 8px;
+  }
+
+  .journey-detail-header {
+    padding: 12px;
+  }
+}

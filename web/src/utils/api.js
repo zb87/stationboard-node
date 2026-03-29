@@ -37,3 +37,21 @@ export async function fetchStationBoard(stationId, type, timestamp) {
   }
   return res.json();
 }
+
+/**
+ * Fetch all stops for a specific journey.
+ * Rate-limited to at most 1 request per second.
+ * @param {string} journeyRef
+ * @param {string} operatingDayRef
+ * @returns {Promise<import('./types').Stop[]>}
+ */
+export async function fetchJourneyStops(journeyRef, operatingDayRef) {
+  await rateLimit();
+  const res = await fetch(
+    `${API_BASE}/journey/${encodeURIComponent(journeyRef)}/${encodeURIComponent(operatingDayRef)}`
+  );
+  if (!res.ok) {
+    throw new Error(`API error: ${res.status}`);
+  }
+  return res.json();
+}

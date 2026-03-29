@@ -1,12 +1,26 @@
 import { useState } from 'react';
 import StationBoard from './components/StationBoard.jsx';
+import JourneyDetail from './components/JourneyDetail.jsx';
 import { useStationBoard } from './hooks/useStationBoard.js';
 import './App.css';
 
 export default function App() {
   const [type, setType] = useState('departure');
+  const [selectedJourney, setSelectedJourney] = useState(null);
   const { journeys, isLoadingTop, isLoadingBottom, error, loadFuture, loadPast } =
     useStationBoard(type);
+
+  // If a journey is selected, show the detail view
+  if (selectedJourney) {
+    return (
+      <div className="app">
+        <JourneyDetail
+          journey={selectedJourney}
+          onBack={() => setSelectedJourney(null)}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="app">
@@ -56,6 +70,7 @@ export default function App() {
           error={error}
           onLoadPast={loadPast}
           onLoadFuture={loadFuture}
+          onJourneyClick={setSelectedJourney}
         />
       </main>
     </div>

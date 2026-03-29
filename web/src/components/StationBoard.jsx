@@ -20,6 +20,7 @@ export default function StationBoard({
   error,
   onLoadPast,
   onLoadFuture,
+  onJourneyClick,
 }) {
   const scrollRef = useRef(null);
   const firstJourneyRef = useRef(null);
@@ -75,7 +76,12 @@ export default function StationBoard({
   // Group journeys by date and insert date headers
   const renderItems = useCallback(() => {
     return journeys.map((journey, i) => (
-      <div key={`${journey.journeyRef}|${journey.operatingDayRef}`} ref={i === 0 ? firstJourneyRef : null}>
+      <div
+        key={`${journey.journeyRef}|${journey.operatingDayRef}`}
+        ref={i === 0 ? firstJourneyRef : null}
+        onClick={() => onJourneyClick?.(journey)}
+        style={{ cursor: onJourneyClick ? 'pointer' : undefined }}
+      >
         <JourneyRow journey={journey} type={type} />
       </div>
     ));
