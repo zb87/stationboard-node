@@ -7,6 +7,8 @@ import './App.css';
 
 const DEFAULT_STATION = { id: '8503000', name: 'Zürich HB' };
 const BOOKMARKS_KEY = 'stationboard_bookmarks';
+const LAST_STATION_KEY = 'stationboard_last_station';
+const BG_TIMEOUT_MS = 60_000; // 1 minute
 
 function loadBookmarks() {
   try {
@@ -21,15 +23,31 @@ function saveBookmarks(bookmarks) {
   localStorage.setItem(BOOKMARKS_KEY, JSON.stringify(bookmarks));
 }
 
+function loadLastStation() {
+  try {
+    const raw = localStorage.getItem(LAST_STATION_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed?.id && parsed?.name) return parsed;
+    }
+  } catch { /* ignore */ }
+  return DEFAULT_STATION;
+}
+
+function saveLastStation(station) {
+  localStorage.setItem(LAST_STATION_KEY, JSON.stringify({ id: station.id, name: station.name }));
+}
+
 export default function App() {
   const [type, setType] = useState('departure');
   const [menuOpen, setMenuOpen] = useState(false);
   const [bookmarks, setBookmarks] = useState(loadBookmarks);
   const menuRef = useRef(null);
+  const hiddenAtRef = useRef(null);
 
   // Navigation stack: each entry is { view, station?, journey? }
-  const [navStack, setNavStack] = useState([
-    { view: 'station', station: DEFAULT_STATION },
+  const [navStack, setNavStack] = useState(() => [
+    { view: 'station', station: loadLastStation() },
   ]);
 
   const current = navStack[navStack.length - 1];
@@ -37,6 +55,32 @@ export default function App() {
 
   const { journeys, isLoadingTop, isLoadingBottom, error, loadFuture, loadPast } =
     useStationBoard(type, currentStation.id);
+
+  // Persist the last viewed station whenever it changes
+  useEffect(() => {
+    if (current.view === 'station' && currentStation?.id) {
+      saveLastStation(currentStation);
+    }
+  }, [current.view, currentStation]);
+
+  // Reset nav stack when returning from background after >1 minute
+  useEffect(() => {
+    function handleVisibilityChange() {
+      if (document.hidden) {
+        hiddenAtRef.current = Date.now();
+      } else if (hiddenAtRef.current) {
+        const elapsed = Date.now() - hiddenAtRef.current;
+        hiddenAtRef.current = null;
+        if (elapsed >= BG_TIMEOUT_MS) {
+          const lastStation = loadLastStation();
+          setNavStack([{ view: 'station', station: lastStation }]);
+          setType('departure');
+        }
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, []);
 
   // Close overflow menu when clicking outside
   useEffect(() => {
