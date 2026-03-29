@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { fetchStationBoard } from '../utils/api.js';
 
-const STATION_ID = '8503000';
+const DEFAULT_STATION_ID = '8503000';
 
 /**
  * Extract the relevant time from a journey based on type.
@@ -58,7 +58,7 @@ function computeAverageGap(journeys, type) {
  * - If the returned results don't overlap with existing data, drops them
  *   and retries with the gap halved until overlap is found.
  */
-export function useStationBoard(type) {
+export function useStationBoard(type, stationId = DEFAULT_STATION_ID) {
   const [journeys, setJourneys] = useState([]);
   const [isLoadingTop, setIsLoadingTop] = useState(false);
   const [isLoadingBottom, setIsLoadingBottom] = useState(false);
@@ -116,7 +116,7 @@ export function useStationBoard(type) {
     setIsLoadingBottom(true);
     setError(null);
     try {
-      const data = await fetchStationBoard(STATION_ID, boardType);
+      const data = await fetchStationBoard(stationId, boardType);
       seenKeys.current.clear();
       for (const j of data) {
         seenKeys.current.add(journeyKey(j));
@@ -131,7 +131,7 @@ export function useStationBoard(type) {
     }
   }, []);
 
-  // Reset and reload when type changes
+  // Reset and reload when type or station changes
   useEffect(() => {
     seenKeys.current.clear();
     journeysRef.current = [];
@@ -139,7 +139,7 @@ export function useStationBoard(type) {
     setError(null);
     loadingRef.current = { top: false, bottom: false };
     loadInitial(type);
-  }, [type, loadInitial]);
+  }, [type, stationId, loadInitial]);
 
   /**
    * Load future journeys (scroll down).
@@ -158,7 +158,7 @@ export function useStationBoard(type) {
     try {
       // Add 1 minute to avoid re-fetching the exact last result
       const ts = new Date(new Date(lastTime).getTime() + 60000).toISOString();
-      const data = await fetchStationBoard(STATION_ID, type, ts);
+      const data = await fetchStationBoard(stationId, type, ts);
       if (data.length > 0) {
         mergeAndSet(data);
       }
@@ -192,7 +192,7 @@ export function useStationBoard(type) {
 
       for (let attempt = 0; attempt < maxRetries; attempt++) {
         const ts = new Date(new Date(earliestTime).getTime() - gapMs).toISOString();
-        const data = await fetchStationBoard(STATION_ID, type, ts);
+        const data = await fetchStationBoard(stationId, type, ts);
 
         if (data.length === 0) {
           // No more data in the past

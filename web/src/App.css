@@ -142,6 +142,41 @@ body {
   letter-spacing: 0.12em;
 }
 
+.header-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.header-back-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 9px;
+  background: var(--btn-bg);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.header-back-btn:hover {
+  background: var(--btn-hover-bg);
+}
+
+.header-back-btn:active {
+  transform: scale(0.93);
+}
+
+.header-back-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+
 /* ===== Toggle ===== */
 .toggle-group {
   display: flex;

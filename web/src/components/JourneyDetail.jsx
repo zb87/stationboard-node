@@ -111,7 +111,7 @@ function BackArrowIcon() {
   );
 }
 
-function StopRow({ stop, index, isFirst, isLast, position }) {
+function StopRow({ stop, index, isFirst, isLast, position, onStopClick }) {
   const arrDelay = getDelayMinutes(stop.arrival?.planned, stop.arrival?.estimated);
   const depDelay = getDelayMinutes(stop.departure?.planned, stop.departure?.estimated);
 
@@ -169,7 +169,17 @@ function StopRow({ stop, index, isFirst, isLast, position }) {
 
       {/* Station info */}
       <div className="stop-info-col">
-        <span className="stop-station-name">{stop.station?.name}</span>
+        <span
+          className="stop-station-name stop-station-link"
+          onClick={(e) => {
+            e.stopPropagation();
+            onStopClick?.(stop.station);
+          }}
+          role="button"
+          tabIndex={0}
+        >
+          {stop.station?.name}
+        </span>
         {platform && (
           <span className="stop-platform">
             <span className="stop-platform-label">Pl.</span>
@@ -181,7 +191,7 @@ function StopRow({ stop, index, isFirst, isLast, position }) {
   );
 }
 
-export default function JourneyDetail({ journey, onBack }) {
+export default function JourneyDetail({ journey, onBack, onStopClick }) {
   const [stops, setStops] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -277,6 +287,7 @@ export default function JourneyDetail({ journey, onBack }) {
               isFirst={i === 0}
               isLast={i === stops.length - 1}
               position={position}
+              onStopClick={onStopClick}
             />
           ))}
         </div>
