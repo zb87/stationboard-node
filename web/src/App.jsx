@@ -1,13 +1,32 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import StationBoard from './components/StationBoard.jsx';
 import JourneyDetail from './components/JourneyDetail.jsx';
+import Bookmarks from './components/Bookmarks.jsx';
 import { useStationBoard } from './hooks/useStationBoard.js';
 import './App.css';
 
 const DEFAULT_STATION = { id: '8503000', name: 'Zürich HB' };
+const BOOKMARKS_KEY = 'stationboard_bookmarks';
+
+function loadBookmarks() {
+  try {
+    const raw = localStorage.getItem(BOOKMARKS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveBookmarks(bookmarks) {
+  localStorage.setItem(BOOKMARKS_KEY, JSON.stringify(bookmarks));
+}
 
 export default function App() {
   const [type, setType] = useState('departure');
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [bookmarks, setBookmarks] = useState(loadBookmarks);
+  const menuRef = useRef(null);
+
   // Navigation stack: each entry is { view, station?, journey? }
   const [navStack, setNavStack] = useState([
     { view: 'station', station: DEFAULT_STATION },
@@ -19,6 +38,42 @@ export default function App() {
   const { journeys, isLoadingTop, isLoadingBottom, error, loadFuture, loadPast } =
     useStationBoard(type, currentStation.id);
 
+  // Close overflow menu when clicking outside
+  useEffect(() => {
+    if (!menuOpen) return;
+    function handleClickOutside(e) {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setMenuOpen(false);
+      }
+    }
+    document.addEventListener('pointerdown', handleClickOutside);
+    return () => document.removeEventListener('pointerdown', handleClickOutside);
+  }, [menuOpen]);
+
+  const isBookmarked = bookmarks.some((b) => b.id === currentStation.id);
+
+  const handleToggleBookmark = useCallback(() => {
+    setBookmarks((prev) => {
+      let next;
+      if (prev.some((b) => b.id === currentStation.id)) {
+        next = prev.filter((b) => b.id !== currentStation.id);
+      } else {
+        next = [...prev, { id: currentStation.id, name: currentStation.name }];
+      }
+      saveBookmarks(next);
+      return next;
+    });
+    setMenuOpen(false);
+  }, [currentStation]);
+
+  const handleRemoveBookmark = useCallback((id) => {
+    setBookmarks((prev) => {
+      const next = prev.filter((b) => b.id !== id);
+      saveBookmarks(next);
+      return next;
+    });
+  }, []);
+
   const handleJourneyClick = useCallback((journey) => {
     setNavStack((prev) => [
       ...prev,
@@ -27,11 +82,23 @@ export default function App() {
   }, []);
 
   const handleStopClick = useCallback((station) => {
-    // station: { ref, name } from the stop data
     if (!station?.ref) return;
     setNavStack((prev) => [
       ...prev,
       { view: 'station', station: { id: station.ref, name: station.name } },
+    ]);
+    setType('departure');
+  }, []);
+
+  const handleOpenBookmarks = useCallback(() => {
+    setMenuOpen(false);
+    setNavStack((prev) => [...prev, { view: 'bookmarks' }]);
+  }, []);
+
+  const handleBookmarkSelect = useCallback((bookmark) => {
+    setNavStack((prev) => [
+      ...prev,
+      { view: 'station', station: { id: bookmark.id, name: bookmark.name } },
     ]);
     setType('departure');
   }, []);
@@ -41,6 +108,20 @@ export default function App() {
   }, []);
 
   const canGoBack = navStack.length > 1;
+
+  // ── Bookmarks view ──
+  if (current.view === 'bookmarks') {
+    return (
+      <div className="app">
+        <Bookmarks
+          bookmarks={bookmarks}
+          onSelectStation={handleBookmarkSelect}
+          onBack={handleBack}
+          onRemoveBookmark={handleRemoveBookmark}
+        />
+      </div>
+    );
+  }
 
   // ── Journey detail view ──
   if (current.view === 'journey' && current.journey) {
@@ -78,25 +159,81 @@ export default function App() {
               <span className="header-subtitle">Stationboard</span>
             </div>
           </div>
-          <div className="toggle-group" role="tablist" aria-label="Board type">
-            <button
-              id="toggle-departure"
-              className={`toggle-btn ${type === 'departure' ? 'active' : ''}`}
-              role="tab"
-              aria-selected={type === 'departure'}
-              onClick={() => setType('departure')}
-            >
-              Departures
-            </button>
-            <button
-              id="toggle-arrival"
-              className={`toggle-btn ${type === 'arrival' ? 'active' : ''}`}
-              role="tab"
-              aria-selected={type === 'arrival'}
-              onClick={() => setType('arrival')}
-            >
-              Arrivals
-            </button>
+
+          <div className="header-controls">
+            {/* Departure / Arrival dropdown */}
+            <div className="type-dropdown-wrap">
+              <select
+                id="type-select"
+                className="type-dropdown"
+                value={type}
+                onChange={(e) => setType(e.target.value)}
+                aria-label="Board type"
+              >
+                <option value="departure">Departures</option>
+                <option value="arrival">Arrivals</option>
+              </select>
+              <svg className="type-dropdown-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </div>
+
+            {/* 3-dot overflow menu */}
+            <div className="overflow-menu-wrap" ref={menuRef}>
+              <button
+                className="overflow-btn"
+                onClick={() => setMenuOpen((o) => !o)}
+                aria-label="More options"
+                aria-expanded={menuOpen}
+                id="overflow-menu-btn"
+              >
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <circle cx="12" cy="5" r="1.8" />
+                  <circle cx="12" cy="12" r="1.8" />
+                  <circle cx="12" cy="19" r="1.8" />
+                </svg>
+              </button>
+
+              {menuOpen && (
+                <div className="overflow-menu" role="menu" id="overflow-menu">
+                  <button
+                    className="overflow-menu-item"
+                    role="menuitem"
+                    id="menu-bookmarks"
+                    onClick={handleOpenBookmarks}
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+                    </svg>
+                    Bookmarks
+                  </button>
+                  <button
+                    className="overflow-menu-item"
+                    role="menuitem"
+                    id="menu-search"
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="11" cy="11" r="8" />
+                      <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                    </svg>
+                    Search
+                  </button>
+                  <div className="overflow-menu-divider" />
+                  <button
+                    className="overflow-menu-item"
+                    role="menuitem"
+                    id="menu-add-bookmark"
+                    onClick={handleToggleBookmark}
+                  >
+                    <svg viewBox="0 0 24 24" fill={isBookmarked ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+                    </svg>
+                    {isBookmarked ? 'Remove bookmark' : 'Add to bookmarks'}
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </header>
