@@ -129,7 +129,7 @@ export function useStationBoard(type, stationId = DEFAULT_STATION_ID) {
     } finally {
       setIsLoadingBottom(false);
     }
-  }, []);
+  }, [stationId]);
 
   // Reset and reload when type or station changes
   useEffect(() => {
@@ -168,7 +168,7 @@ export function useStationBoard(type, stationId = DEFAULT_STATION_ID) {
       setIsLoadingBottom(false);
       loadingRef.current.bottom = false;
     }
-  }, [type, mergeAndSet]);
+  }, [type, stationId, mergeAndSet]);
 
   /**
    * Load past journeys (scroll up).
@@ -214,7 +214,7 @@ export function useStationBoard(type, stationId = DEFAULT_STATION_ID) {
       setIsLoadingTop(false);
       loadingRef.current.top = false;
     }
-  }, [type, mergeAndSet, hasOverlap]);
+  }, [type, stationId, mergeAndSet, hasOverlap]);
 
   return {
     journeys,
