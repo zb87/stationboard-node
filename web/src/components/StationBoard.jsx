@@ -1,6 +1,5 @@
 import { useRef, useCallback, useEffect, useLayoutEffect } from 'react';
 import JourneyRow from './JourneyRow.jsx';
-import { formatDateHeader, isSameDay } from '../utils/time.js';
 import './StationBoard.css';
 
 /**
@@ -75,34 +74,11 @@ export default function StationBoard({
 
   // Group journeys by date and insert date headers
   const renderItems = useCallback(() => {
-    const items = [];
-    let lastDate = null;
-
-    for (let i = 0; i < journeys.length; i++) {
-      const journey = journeys[i];
-      const time = getTimeForJourney(journey, type);
-
-      if (time) {
-        const currentDate = new Date(time);
-        if (!lastDate || !isSameDay(lastDate.toISOString(), currentDate.toISOString())) {
-          items.push(
-            <div key={`date-${currentDate.toDateString()}`} className="date-header">
-              {formatDateHeader(currentDate)}
-            </div>
-          );
-          lastDate = currentDate;
-        }
-      }
-
-      const isFirst = i === 0;
-      items.push(
-        <div key={`${journey.journeyRef}|${journey.operatingDayRef}`} ref={isFirst ? firstJourneyRef : null}>
-          <JourneyRow journey={journey} type={type} />
-        </div>
-      );
-    }
-
-    return items;
+    return journeys.map((journey, i) => (
+      <div key={`${journey.journeyRef}|${journey.operatingDayRef}`} ref={i === 0 ? firstJourneyRef : null}>
+        <JourneyRow journey={journey} type={type} />
+      </div>
+    ));
   }, [journeys, type]);
 
   return (
