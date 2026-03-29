@@ -6,6 +6,7 @@ const {
   parseStopEventResult,
   parseTripInfoResult,
 } = require('../src/parsers');
+const { buildStopEventRequest } = require('../src/routes/station');
 
 // ---------- extractText ----------
 
@@ -332,5 +333,41 @@ describe('parseTripInfoResult', () => {
     const stops = parseTripInfoResult(tripResult);
     assert.equal(stops.length, 1);
     assert.equal(stops[0].station.name, 'Final Stop');
+  });
+});
+
+// ---------- buildStopEventRequest ----------
+
+describe('buildStopEventRequest', () => {
+  it('uses the provided timestamp in the XML', () => {
+    const xml = buildStopEventRequest('8503000', 'departure', '2026-03-22T17:00:00Z');
+    assert.ok(xml.includes('<DepArrTime>2026-03-22T17:00:00Z</DepArrTime>'));
+    // Both RequestTimestamp elements should use the provided timestamp
+    const matches = xml.match(/RequestTimestamp>2026-03-22T17:00:00Z</g);
+    assert.equal(matches.length, 2);
+  });
+
+  it('uses current time when no timestamp is provided', () => {
+    const before = new Date().toISOString();
+    const xml = buildStopEventRequest('8503000', 'departure');
+    const after = new Date().toISOString();
+
+    // Extract the DepArrTime from the XML
+    const match = xml.match(/<DepArrTime>(.+?)<\/DepArrTime>/);
+    assert.ok(match, 'DepArrTime should be present in XML');
+    const usedTime = match[1];
+
+    // The used time should be between before and after
+    assert.ok(usedTime >= before && usedTime <= after, 'should default to current time');
+  });
+
+  it('sets the correct StopEventType', () => {
+    const xml = buildStopEventRequest('8503000', 'arrival', '2026-03-22T17:00:00Z');
+    assert.ok(xml.includes('<StopEventType>arrival</StopEventType>'));
+  });
+
+  it('sets the correct StopPointRef', () => {
+    const xml = buildStopEventRequest('8507000', 'departure', '2026-03-22T17:00:00Z');
+    assert.ok(xml.includes('<siri:StopPointRef>8507000</siri:StopPointRef>'));
   });
 });

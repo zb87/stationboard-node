@@ -6,9 +6,12 @@ const router = express.Router();
 
 /**
  * Build the OJP StopEventRequest XML.
+ * @param {string} stationId
+ * @param {string} type - 'departure' or 'arrival'
+ * @param {string} [timestamp] - ISO 8601 timestamp; defaults to now
  */
-function buildStopEventRequest(stationId, type) {
-  const now = new Date().toISOString();
+function buildStopEventRequest(stationId, type, timestamp) {
+  const depArrTime = timestamp || new Date().toISOString();
   return `<?xml version="1.0" encoding="UTF-8"?>
 <OJP xmlns="http://www.vdv.de/ojp" xmlns:siri="http://www.siri.org.uk/siri" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="2.0">
   <OJPRequest>
@@ -16,10 +19,10 @@ function buildStopEventRequest(stationId, type) {
       <siri:ServiceRequestContext>
         <siri:Language>de</siri:Language>
       </siri:ServiceRequestContext>
-      <siri:RequestTimestamp>${now}</siri:RequestTimestamp>
+      <siri:RequestTimestamp>${depArrTime}</siri:RequestTimestamp>
       <siri:RequestorRef>stationboard_prod</siri:RequestorRef>
       <OJPStopEventRequest>
-        <siri:RequestTimestamp>${now}</siri:RequestTimestamp>
+        <siri:RequestTimestamp>${depArrTime}</siri:RequestTimestamp>
         <siri:MessageIdentifier>SER_1</siri:MessageIdentifier>
         <Location>
           <PlaceRef>
@@ -28,7 +31,7 @@ function buildStopEventRequest(stationId, type) {
               <Text>${stationId}</Text>
             </Name>
           </PlaceRef>
-          <DepArrTime>${now}</DepArrTime>
+          <DepArrTime>${depArrTime}</DepArrTime>
         </Location>
         <Params>
           <NumberOfResults>30</NumberOfResults>
@@ -49,13 +52,18 @@ function buildStopEventRequest(stationId, type) {
  */
 router.get('/:stationId/:type', async (req, res) => {
   const { stationId, type } = req.params;
+  const { timestamp } = req.query;
 
   if (type !== 'departure' && type !== 'arrival') {
     return res.status(400).json({ error: 'type must be "departure" or "arrival"' });
   }
 
+  if (timestamp && isNaN(Date.parse(timestamp))) {
+    return res.status(400).json({ error: 'timestamp must be a valid ISO 8601 date string' });
+  }
+
   try {
-    const xml = buildStopEventRequest(stationId, type);
+    const xml = buildStopEventRequest(stationId, type, timestamp);
     const parsed = await sendOjpRequest(xml);
 
     const delivery =
@@ -77,3 +85,4 @@ router.get('/:stationId/:type', async (req, res) => {
 });
 
 module.exports = router;
+module.exports.buildStopEventRequest = buildStopEventRequest;

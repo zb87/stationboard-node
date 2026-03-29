@@ -9,10 +9,20 @@ Returns departures or arrivals for a station.
 - **stationId** — Station ID (e.g. `8503000` for Zürich HB)
 - **type** — `departure` or `arrival`
 
+**Query Parameters:**
+
+| Parameter   | Required | Description                                                                 |
+|-------------|----------|-----------------------------------------------------------------------------|
+| `timestamp` | No       | ISO 8601 date string (e.g. `2026-03-22T17:00:00Z`). Defaults to now.       |
+
 **Response:** `Journey[]`
 
 ```bash
+# Current departures
 curl http://localhost:3000/station/8503000/departure
+
+# Departures at a specific time
+curl "http://localhost:3000/station/8503000/departure?timestamp=2026-03-22T17:00:00Z"
 ```
 
 ```json
