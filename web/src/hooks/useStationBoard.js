@@ -21,6 +21,18 @@ function journeyKey(journey) {
 }
 
 /**
+ * Sort journeys by their time.
+ */
+function sortByTime(list, type) {
+  return [...list].sort((a, b) => {
+    const ta = getJourneyTime(a, type);
+    const tb = getJourneyTime(b, type);
+    if (!ta || !tb) return 0;
+    return new Date(ta) - new Date(tb);
+  });
+}
+
+/**
  * Compute the average time gap (in ms) between consecutive sorted journeys.
  */
 function computeAverageGap(journeys, type) {
@@ -43,54 +55,50 @@ function computeAverageGap(journeys, type) {
  *
  * Smart RPC logic for scrolling backward:
  * - Estimates a timestamp offset based on average gap between journeys.
- * - If the returned results don't overlap with existing data, retries
- *   with the gap halved until overlap is found.
+ * - If the returned results don't overlap with existing data, drops them
+ *   and retries with the gap halved until overlap is found.
  */
 export function useStationBoard(type) {
   const [journeys, setJourneys] = useState([]);
   const [isLoadingTop, setIsLoadingTop] = useState(false);
   const [isLoadingBottom, setIsLoadingBottom] = useState(false);
   const [error, setError] = useState(null);
+
+  // Use refs to avoid stale closures in async callbacks
   const seenKeys = useRef(new Set());
+  const journeysRef = useRef([]);
   const loadingRef = useRef({ top: false, bottom: false });
 
-  // Reset when type changes
+  // Keep ref in sync with state
   useEffect(() => {
-    seenKeys.current.clear();
-    setJourneys([]);
-    setError(null);
-    loadInitial();
-  }, [type]);
-
-  const sortJourneys = useCallback(
-    (list) => {
-      return [...list].sort((a, b) => {
-        const ta = getJourneyTime(a, type);
-        const tb = getJourneyTime(b, type);
-        if (!ta || !tb) return 0;
-        return new Date(ta) - new Date(tb);
-      });
-    },
-    [type]
-  );
-
-  const mergeJourneys = useCallback(
-    (existing, newOnes) => {
-      const merged = [...existing];
-      for (const j of newOnes) {
-        const key = journeyKey(j);
-        if (!seenKeys.current.has(key)) {
-          seenKeys.current.add(key);
-          merged.push(j);
-        }
-      }
-      return sortJourneys(merged);
-    },
-    [sortJourneys]
-  );
+    journeysRef.current = journeys;
+  }, [journeys]);
 
   /**
-   * Check if new results overlap with existing journeys.
+   * Merge new journeys into existing list, deduplicating by key.
+   */
+  const mergeAndSet = useCallback((newOnes) => {
+    const existing = journeysRef.current;
+    const merged = [...existing];
+    let added = 0;
+    for (const j of newOnes) {
+      const key = journeyKey(j);
+      if (!seenKeys.current.has(key)) {
+        seenKeys.current.add(key);
+        merged.push(j);
+        added++;
+      }
+    }
+    if (added > 0) {
+      const sorted = sortByTime(merged, type);
+      journeysRef.current = sorted;
+      setJourneys(sorted);
+    }
+    return added;
+  }, [type]);
+
+  /**
+   * Check if any of the new journeys overlap with existing data.
    */
   const hasOverlap = useCallback((newJourneys) => {
     for (const j of newJourneys) {
@@ -101,80 +109,84 @@ export function useStationBoard(type) {
     return false;
   }, []);
 
-  const loadInitial = useCallback(async () => {
+  /**
+   * Load initial data (current time).
+   */
+  const loadInitial = useCallback(async (boardType) => {
     setIsLoadingBottom(true);
     setError(null);
     try {
-      const data = await fetchStationBoard(STATION_ID, type);
+      const data = await fetchStationBoard(STATION_ID, boardType);
       seenKeys.current.clear();
       for (const j of data) {
         seenKeys.current.add(journeyKey(j));
       }
-      setJourneys(sortJourneys(data));
+      const sorted = sortByTime(data, boardType);
+      journeysRef.current = sorted;
+      setJourneys(sorted);
     } catch (err) {
       setError(err.message);
     } finally {
       setIsLoadingBottom(false);
     }
-  }, [type, sortJourneys]);
+  }, []);
 
+  // Reset and reload when type changes
+  useEffect(() => {
+    seenKeys.current.clear();
+    journeysRef.current = [];
+    setJourneys([]);
+    setError(null);
+    loadingRef.current = { top: false, bottom: false };
+    loadInitial(type);
+  }, [type, loadInitial]);
+
+  /**
+   * Load future journeys (scroll down).
+   */
   const loadFuture = useCallback(async () => {
     if (loadingRef.current.bottom) return;
+    const current = journeysRef.current;
+    if (current.length === 0) return;
+
+    const lastTime = getJourneyTime(current[current.length - 1], type);
+    if (!lastTime) return;
+
     loadingRef.current.bottom = true;
     setIsLoadingBottom(true);
+
     try {
-      setJourneys((prev) => {
-        if (prev.length === 0) return prev;
-        const lastTime = getJourneyTime(prev[prev.length - 1], type);
-        if (!lastTime) return prev;
-        // Add 1 minute to avoid re-fetching the exact same results
-        const ts = new Date(new Date(lastTime).getTime() + 60000).toISOString();
-        fetchStationBoard(STATION_ID, type, ts).then((data) => {
-          if (data.length > 0) {
-            setJourneys((current) => mergeJourneys(current, data));
-          }
-          setIsLoadingBottom(false);
-          loadingRef.current.bottom = false;
-        }).catch((err) => {
-          setError(err.message);
-          setIsLoadingBottom(false);
-          loadingRef.current.bottom = false;
-        });
-        return prev;
-      });
-    } catch {
+      // Add 1 minute to avoid re-fetching the exact last result
+      const ts = new Date(new Date(lastTime).getTime() + 60000).toISOString();
+      const data = await fetchStationBoard(STATION_ID, type, ts);
+      if (data.length > 0) {
+        mergeAndSet(data);
+      }
+    } catch (err) {
+      setError(err.message);
+    } finally {
       setIsLoadingBottom(false);
       loadingRef.current.bottom = false;
     }
-  }, [type, mergeJourneys]);
+  }, [type, mergeAndSet]);
 
+  /**
+   * Load past journeys (scroll up).
+   * Uses smart retry: if results don't overlap, halves the gap and retries.
+   */
   const loadPast = useCallback(async () => {
     if (loadingRef.current.top) return;
+    const current = journeysRef.current;
+    if (current.length === 0) return;
+
+    const earliestTime = getJourneyTime(current[0], type);
+    if (!earliestTime) return;
+
     loadingRef.current.top = true;
     setIsLoadingTop(true);
 
     try {
-      // Read current state
-      let currentJourneys;
-      setJourneys((prev) => {
-        currentJourneys = prev;
-        return prev;
-      });
-
-      if (!currentJourneys || currentJourneys.length === 0) {
-        setIsLoadingTop(false);
-        loadingRef.current.top = false;
-        return;
-      }
-
-      const earliestTime = getJourneyTime(currentJourneys[0], type);
-      if (!earliestTime) {
-        setIsLoadingTop(false);
-        loadingRef.current.top = false;
-        return;
-      }
-
-      const avgGap = computeAverageGap(currentJourneys, type);
+      const avgGap = computeAverageGap(current, type);
       let gapMs = avgGap * 30; // aim for ~30 results worth of time
       const maxRetries = 5;
 
@@ -188,12 +200,12 @@ export function useStationBoard(type) {
         }
 
         if (hasOverlap(data) || attempt === maxRetries - 1) {
-          // Good — results overlap with our existing data, merge them
-          setJourneys((prev) => mergeJourneys(prev, data));
+          // Results overlap with our existing data — merge them
+          mergeAndSet(data);
           break;
         }
 
-        // No overlap — gap was too large, retry with half the gap
+        // No overlap — gap was too large, drop results and retry with half the gap
         gapMs = Math.max(gapMs / 2, 60000); // minimum 1 minute
       }
     } catch (err) {
@@ -202,7 +214,7 @@ export function useStationBoard(type) {
       setIsLoadingTop(false);
       loadingRef.current.top = false;
     }
-  }, [type, mergeJourneys, hasOverlap]);
+  }, [type, mergeAndSet, hasOverlap]);
 
   return {
     journeys,
