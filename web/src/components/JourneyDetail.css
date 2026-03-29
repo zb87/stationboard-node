@@ -116,7 +116,53 @@
 }
 
 .stop-row.cancelled {
-  opacity: 0.4;
+  opacity: 0.5;
+}
+
+.stop-row.cancelled .stop-time,
+.stop-row.cancelled .stop-station-name {
+  text-decoration: line-through;
+  text-decoration-thickness: 2px;
+  text-decoration-color: var(--text-secondary);
+  color: var(--text-muted);
+}
+
+.stop-row.cancelled .stop-delay,
+.stop-row.cancelled .stop-platform {
+  color: var(--text-muted);
+}
+
+.stop-cancelled-badge {
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--sbb-red);
+  background: var(--delay-late-bg);
+  padding: 1px 5px;
+  border-radius: 3px;
+  flex-shrink: 0;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.stop-platform-area {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.stop-platform-old {
+  text-decoration: line-through;
+  text-decoration-color: var(--platform-strike, var(--text-muted));
+  opacity: 0.5;
+  font-size: 0.72rem;
+}
+
+.stop-platform-changed {
+  font-weight: 700;
+  color: var(--sbb-red);
 }
 
 /* Time column */

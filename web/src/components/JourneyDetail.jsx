@@ -132,6 +132,17 @@ function TrainBetweenIndicator({ fraction }) {
   );
 }
 
+/**
+ * Check if the estimated platform is a refinement of the planned platform.
+ * e.g. planned="41/42" estimated="41" → refinement (just narrowing down)
+ * e.g. planned="11" estimated="5" → real change
+ */
+function isPlatformRefinement(planned, estimated) {
+  if (!planned || !estimated) return false;
+  const parts = String(planned).split('/').map((p) => p.trim());
+  return parts.includes(String(estimated).trim());
+}
+
 function StopRow({ stop, index, isFirst, isLast, position, onStopClick }) {
   const arrDelay = getDelayMinutes(stop.arrival?.planned, stop.arrival?.estimated);
   const depDelay = getDelayMinutes(stop.departure?.planned, stop.departure?.estimated);
@@ -139,7 +150,13 @@ function StopRow({ stop, index, isFirst, isLast, position, onStopClick }) {
   const stopState = getStopState(stop, position, index);
   const isActive = position?.type === 'at' && position.index === index;
 
-  const platform = stop.platform?.estimated || stop.platform?.planned;
+  // Platform change logic
+  const platformData = stop.platform;
+  const hasEstimatedPlatform =
+    platformData?.estimated && platformData?.planned && platformData.estimated !== platformData.planned;
+  const isRefinement = hasEstimatedPlatform && isPlatformRefinement(platformData.planned, platformData.estimated);
+  const isRealPlatformChange = hasEstimatedPlatform && !isRefinement;
+  const displayPlatform = isRefinement ? platformData.estimated : (platformData?.planned || '');
 
   // Determine if this is a "passing" stop (has only times but isn't a scheduled stop)
   const hasArrival = stop.arrival?.planned;
@@ -193,7 +210,7 @@ function StopRow({ stop, index, isFirst, isLast, position, onStopClick }) {
       {/* Station info */}
       <div className="stop-info-col">
         <span
-          className="stop-station-name stop-station-link"
+          className={`stop-station-name stop-station-link`}
           onClick={(e) => {
             e.stopPropagation();
             onStopClick?.(stop.station);
@@ -203,12 +220,21 @@ function StopRow({ stop, index, isFirst, isLast, position, onStopClick }) {
         >
           {stop.station?.name}
         </span>
-        {platform && (
-          <span className="stop-platform">
-            <span className="stop-platform-label">Pl.</span>
-            {platform}
-          </span>
-        )}
+        <span className="stop-platform-area">
+          {stop.cancelled && <span className="stop-cancelled-badge">Cancelled</span>}
+          {isRealPlatformChange && (
+            <span className="stop-platform stop-platform-old">
+              <span className="stop-platform-label">Pl.</span>
+              {platformData.planned}
+            </span>
+          )}
+          {(isRealPlatformChange ? platformData.estimated : displayPlatform) && (
+            <span className={`stop-platform ${isRealPlatformChange ? 'stop-platform-changed' : ''}`}>
+              <span className="stop-platform-label">Pl.</span>
+              {isRealPlatformChange ? platformData.estimated : displayPlatform}
+            </span>
+          )}
+        </span>
       </div>
     </div>
   );
