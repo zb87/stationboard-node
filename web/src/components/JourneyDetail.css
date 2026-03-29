@@ -101,6 +101,7 @@
   padding: 0 16px;
   min-height: 56px;
   animation: stopRowFadeIn 0.35s ease both;
+  position: relative;
 }
 
 @keyframes stopRowFadeIn {
@@ -172,15 +173,15 @@
 .stop-timeline-line-bottom {
   width: 2px;
   flex: 1;
-  background: var(--text-muted);
-  opacity: 0.35;
+  min-height: 4px;
+  background: var(--timeline-line);
 }
 
-.stop-row:first-child .stop-timeline-line-top {
+.stop-row.first-stop .stop-timeline-line-top {
   background: transparent;
 }
 
-.stop-row:last-child .stop-timeline-line-bottom {
+.stop-row.last-stop .stop-timeline-line-bottom {
   background: transparent;
 }
 
@@ -211,7 +212,7 @@
 
 .stop-row.past .stop-timeline-line-top,
 .stop-row.past .stop-timeline-line-bottom {
-  opacity: 0.6;
+  opacity: 1;
 }
 
 /* Future stops: hollow dots */
@@ -260,20 +261,41 @@
   margin-right: 2px;
 }
 
-/* ── Train position indicator between stops ── */
-.stop-train-position {
-  display: flex;
-  align-items: stretch;
-  padding: 0 16px;
-  height: 0;
+/* ── Train between-stops indicator ── */
+.train-between-row {
+  min-height: 28px !important;
+  animation: none !important;
+}
+
+.train-between-row .stop-time-col {
+  padding: 0;
+}
+
+.train-between-row .stop-info-col {
+  padding: 0;
+}
+
+.train-between-track {
+  width: 2px;
+  height: 100%;
+  background: var(--timeline-line);
   position: relative;
 }
 
-.stop-train-position .stop-timeline-col {
-  position: relative;
+.train-between-dot {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--sbb-red);
+  box-shadow: 0 0 8px rgba(235, 0, 0, 0.5), 0 0 20px rgba(235, 0, 0, 0.2);
+  z-index: 5;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  animation: trainPulse 2s ease-in-out infinite;
 }
 
-.train-position-dot {
+.train-between-dot {
   position: absolute;
   width: 12px;
   height: 12px;

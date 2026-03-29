@@ -27,6 +27,7 @@
   --badge-default-bg: rgba(255, 255, 255, 0.1);
   --cancelled-line: rgba(255, 255, 255, 0.3);
   --platform-strike: rgba(255, 255, 255, 0.4);
+  --timeline-line: rgba(139, 148, 176, 0.35);
   color-scheme: dark;
 }
 
@@ -58,6 +59,7 @@
     --badge-default-bg: rgba(0, 0, 0, 0.06);
     --cancelled-line: rgba(0, 0, 0, 0.3);
     --platform-strike: rgba(0, 0, 0, 0.4);
+    --timeline-line: rgba(90, 95, 122, 0.3);
     color-scheme: light;
   }
 }

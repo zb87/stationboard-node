@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { fetchJourneyStops } from '../utils/api.js';
 import { formatTime, getDelayMinutes } from '../utils/time.js';
 import './JourneyDetail.css';
@@ -111,6 +111,27 @@ function BackArrowIcon() {
   );
 }
 
+/**
+ * Red dot indicator rendered between two stop rows when the train is in transit.
+ * The fraction (0–1) determines vertical position between the two stops.
+ */
+function TrainBetweenIndicator({ fraction }) {
+  return (
+    <div className="stop-row train-between-row">
+      <div className="stop-time-col" />
+      <div className="stop-timeline-col">
+        <div className="train-between-track">
+          <div
+            className="train-between-dot"
+            style={{ top: `${Math.max(10, Math.min(90, fraction * 100))}%` }}
+          />
+        </div>
+      </div>
+      <div className="stop-info-col" />
+    </div>
+  );
+}
+
 function StopRow({ stop, index, isFirst, isLast, position, onStopClick }) {
   const arrDelay = getDelayMinutes(stop.arrival?.planned, stop.arrival?.estimated);
   const depDelay = getDelayMinutes(stop.departure?.planned, stop.departure?.estimated);
@@ -129,6 +150,8 @@ function StopRow({ stop, index, isFirst, isLast, position, onStopClick }) {
   if (stop.cancelled) rowClass += ' cancelled';
   if (stopState) rowClass += ` ${stopState}`;
   if (isMuted) rowClass += ' muted-stop';
+  if (isFirst) rowClass += ' first-stop';
+  if (isLast) rowClass += ' last-stop';
 
   return (
     <div className={rowClass} style={{ animationDelay: `${index * 40}ms` }}>
@@ -280,15 +303,19 @@ export default function JourneyDetail({ journey, onBack, onStopClick }) {
       {!loading && stops.length > 0 && (
         <div className="journey-stops-scroll">
           {stops.map((stop, i) => (
-            <StopRow
-              key={`${stop.station?.ref || i}-${i}`}
-              stop={stop}
-              index={i}
-              isFirst={i === 0}
-              isLast={i === stops.length - 1}
-              position={position}
-              onStopClick={onStopClick}
-            />
+            <React.Fragment key={`${stop.station?.ref || i}-${i}`}>
+              <StopRow
+                stop={stop}
+                index={i}
+                isFirst={i === 0}
+                isLast={i === stops.length - 1}
+                position={position}
+                onStopClick={onStopClick}
+              />
+              {position?.type === 'between' && position.fromIndex === i && (
+                <TrainBetweenIndicator fraction={position.fraction} />
+              )}
+            </React.Fragment>
           ))}
         </div>
       )}
