@@ -112,7 +112,7 @@ body {
   -webkit-backdrop-filter: blur(20px);
   border-bottom: 1px solid var(--glass-border);
   box-shadow: var(--shadow-header);
-  padding: 16px 16px 12px;
+  padding: calc(env(safe-area-inset-top, 0px) + 16px) 16px 12px;
   flex-shrink: 0;
 }
 
