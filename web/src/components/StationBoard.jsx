@@ -1,4 +1,4 @@
-import { useRef, useCallback, useEffect } from 'react';
+import { useRef, useCallback, useEffect, useLayoutEffect } from 'react';
 import JourneyRow from './JourneyRow.jsx';
 import { formatDateHeader, isSameDay } from '../utils/time.js';
 import './StationBoard.css';
@@ -23,38 +23,55 @@ export default function StationBoard({
   onLoadFuture,
 }) {
   const scrollRef = useRef(null);
-  const topSentinelRef = useRef(null);
-  const bottomSentinelRef = useRef(null);
+  const firstJourneyRef = useRef(null);
+  const prevScrollHeightRef = useRef(0);
+  const pendingPastLoad = useRef(false);
+  const hasInitScrolled = useRef(false);
 
-  // Intersection observer for infinite scroll
+  // ── On initial load / type change, scroll to the first journey (hiding the "load earlier" button) ──
   useEffect(() => {
+    if (journeys.length > 0 && !hasInitScrolled.current) {
+      requestAnimationFrame(() => {
+        if (firstJourneyRef.current) {
+          firstJourneyRef.current.scrollIntoView({ block: 'start' });
+        }
+        hasInitScrolled.current = true;
+      });
+    }
+  }, [journeys.length]);
+
+  // Reset on type change (journeys cleared to empty)
+  useEffect(() => {
+    if (journeys.length === 0) {
+      hasInitScrolled.current = false;
+    }
+  }, [journeys.length]);
+
+  // ── Scroll position preservation after prepending past items ──
+  useLayoutEffect(() => {
     const container = scrollRef.current;
     if (!container) return;
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting) {
-            if (entry.target === topSentinelRef.current) {
-              onLoadPast();
-            } else if (entry.target === bottomSentinelRef.current) {
-              onLoadFuture();
-            }
-          }
-        }
-      },
-      {
-        root: container,
-        rootMargin: '500px',
-        threshold: 0,
+    if (pendingPastLoad.current && prevScrollHeightRef.current > 0) {
+      const newScrollHeight = container.scrollHeight;
+      const delta = newScrollHeight - prevScrollHeightRef.current;
+      if (delta > 0) {
+        container.scrollTop += delta;
       }
-    );
+      pendingPastLoad.current = false;
+      prevScrollHeightRef.current = 0;
+    }
+  }, [journeys]);
 
-    if (topSentinelRef.current) observer.observe(topSentinelRef.current);
-    if (bottomSentinelRef.current) observer.observe(bottomSentinelRef.current);
-
-    return () => observer.disconnect();
-  }, [onLoadPast, onLoadFuture, journeys.length]);
+  // ── Handle "Load earlier" button click ──
+  const handleLoadEarlier = useCallback(() => {
+    const container = scrollRef.current;
+    if (container) {
+      prevScrollHeightRef.current = container.scrollHeight;
+      pendingPastLoad.current = true;
+    }
+    onLoadPast();
+  }, [onLoadPast]);
 
   // Group journeys by date and insert date headers
   const renderItems = useCallback(() => {
@@ -77,12 +94,11 @@ export default function StationBoard({
         }
       }
 
+      const isFirst = i === 0;
       items.push(
-        <JourneyRow
-          key={`${journey.journeyRef}|${journey.operatingDayRef}`}
-          journey={journey}
-          type={type}
-        />
+        <div key={`${journey.journeyRef}|${journey.operatingDayRef}`} ref={isFirst ? firstJourneyRef : null}>
+          <JourneyRow journey={journey} type={type} />
+        </div>
       );
     }
 
@@ -91,14 +107,22 @@ export default function StationBoard({
 
   return (
     <div className="station-board" ref={scrollRef}>
-      {/* Top sentinel for loading past */}
-      <div ref={topSentinelRef} className="scroll-sentinel" />
-
-      {isLoadingTop && (
-        <div className="loading-indicator loading-top">
-          <div className="loading-dots">
-            <span></span><span></span><span></span>
-          </div>
+      {/* "Load earlier" button — hidden above the fold by default */}
+      {journeys.length > 0 && (
+        <div className="load-earlier">
+          {isLoadingTop ? (
+            <div className="loading-dots">
+              <span></span><span></span><span></span>
+            </div>
+          ) : (
+            <button
+              className="load-earlier-btn"
+              onClick={handleLoadEarlier}
+              id="load-earlier-btn"
+            >
+              Load earlier connections
+            </button>
+          )}
         </div>
       )}
 
@@ -118,16 +142,24 @@ export default function StationBoard({
 
       {renderItems()}
 
-      {isLoadingBottom && (
-        <div className="loading-indicator loading-bottom">
-          <div className="loading-dots">
-            <span></span><span></span><span></span>
-          </div>
+      {/* "Load later" button at the bottom */}
+      {journeys.length > 0 && (
+        <div className="load-later">
+          {isLoadingBottom ? (
+            <div className="loading-dots">
+              <span></span><span></span><span></span>
+            </div>
+          ) : (
+            <button
+              className="load-later-btn"
+              onClick={onLoadFuture}
+              id="load-later-btn"
+            >
+              Load later connections
+            </button>
+          )}
         </div>
       )}
-
-      {/* Bottom sentinel for loading future */}
-      <div ref={bottomSentinelRef} className="scroll-sentinel" />
     </div>
   );
 }

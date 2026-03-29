@@ -161,14 +161,16 @@
   color: var(--text-secondary);
 }
 
-.journey-platform-changed {
-  font-family: 'JetBrains Mono', monospace;
+.journey-platform-old {
+  text-decoration: line-through;
+  text-decoration-color: rgba(255, 255, 255, 0.4);
+  opacity: 0.5;
   font-size: 0.8rem;
+}
+
+.journey-platform-changed {
   font-weight: 700;
   color: var(--sbb-red);
-  background: rgba(235, 0, 0, 0.12);
-  padding: 1px 4px;
-  border-radius: 4px;
 }
 
 /* Mobile adjustments */

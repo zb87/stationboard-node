@@ -25,6 +25,49 @@
   width: 100%;
 }
 
+/* Load earlier / later buttons */
+.load-earlier,
+.load-later {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px 16px;
+}
+
+.load-earlier {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.load-later {
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.load-earlier-btn,
+.load-later-btn {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 8px 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.load-earlier-btn:hover,
+.load-later-btn:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.load-earlier-btn:active,
+.load-later-btn:active {
+  transform: scale(0.97);
+}
+
 /* Date headers */
 .date-header {
   padding: 8px 16px;

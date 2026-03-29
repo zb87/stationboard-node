@@ -15,6 +15,17 @@ function getServiceColorClass(name) {
   return 'badge-default';
 }
 
+/**
+ * Check if the estimated platform is a refinement of the planned platform.
+ * e.g. planned="41/42" estimated="41" → refinement (just narrowing down)
+ * e.g. planned="11" estimated="5" → real change
+ */
+function isPlatformRefinement(planned, estimated) {
+  if (!planned || !estimated) return false;
+  const parts = String(planned).split('/').map((p) => p.trim());
+  return parts.includes(String(estimated).trim());
+}
+
 export default function JourneyRow({ journey, type }) {
   const stop = journey.stop;
   const timeObj = type === 'departure' ? stop?.departure : stop?.arrival;
@@ -23,8 +34,13 @@ export default function JourneyRow({ journey, type }) {
   const delay = getDelayMinutes(planned, estimated);
 
   const platform = stop?.platform;
-  const platformChanged =
+  const hasEstimatedPlatform =
     platform?.estimated && platform?.planned && platform.estimated !== platform.planned;
+  const isRefinement = hasEstimatedPlatform && isPlatformRefinement(platform.planned, platform.estimated);
+  const isRealChange = hasEstimatedPlatform && !isRefinement;
+
+  // Display value: if refinement, show estimated directly; otherwise show planned
+  const displayPlatform = isRefinement ? platform.estimated : (platform?.planned || '');
 
   const directionName =
     type === 'departure' ? journey.destination?.name : journey.origin?.name;
@@ -52,10 +68,12 @@ export default function JourneyRow({ journey, type }) {
       </div>
 
       <div className="journey-platform-col">
-        <span className="journey-platform">{platform?.planned || ''}</span>
-        {platformChanged && (
-          <span className="journey-platform-changed">{platform.estimated}</span>
+        {isRealChange && (
+          <span className="journey-platform journey-platform-old">{platform.planned}</span>
         )}
+        <span className={`journey-platform ${isRealChange ? 'journey-platform-changed' : ''}`}>
+          {isRealChange ? platform.estimated : displayPlatform}
+        </span>
       </div>
     </div>
   );
