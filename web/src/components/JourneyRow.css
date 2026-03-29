@@ -1,0 +1,198 @@
+.journey-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  transition: background-color 0.2s ease;
+  animation: rowFadeIn 0.3s ease;
+}
+
+.journey-row:hover {
+  background-color: rgba(255, 255, 255, 0.04);
+}
+
+.journey-row.cancelled {
+  opacity: 0.5;
+  text-decoration: line-through;
+  text-decoration-color: rgba(255, 255, 255, 0.3);
+}
+
+@keyframes rowFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Time column */
+.journey-time-col {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  min-width: 80px;
+  flex-shrink: 0;
+}
+
+.journey-time {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: 0.02em;
+}
+
+.journey-delay {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border-radius: 4px;
+  padding: 1px 4px;
+}
+
+.delay-late {
+  color: var(--sbb-red);
+  background: rgba(235, 0, 0, 0.12);
+}
+
+.delay-early {
+  color: var(--green);
+  background: rgba(46, 204, 113, 0.12);
+}
+
+/* Service badge */
+.journey-badge {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+  min-width: 40px;
+  text-align: center;
+  flex-shrink: 0;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.badge-sbahn {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  color: #fff;
+}
+
+.badge-intercity {
+  background: linear-gradient(135deg, #dc2626, #b91c1c);
+  color: #fff;
+}
+
+.badge-regio {
+  background: linear-gradient(135deg, #7c3aed, #6d28d9);
+  color: #fff;
+}
+
+.badge-highspeed {
+  background: linear-gradient(135deg, #d97706, #b45309);
+  color: #fff;
+}
+
+.badge-tram {
+  background: linear-gradient(135deg, #0891b2, #0e7490);
+  color: #fff;
+}
+
+.badge-bus {
+  background: linear-gradient(135deg, #059669, #047857);
+  color: #fff;
+}
+
+.badge-default {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-secondary);
+}
+
+/* Destination */
+.journey-destination {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.journey-destination-text {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.journey-cancelled-badge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--sbb-red);
+  background: rgba(235, 0, 0, 0.12);
+  padding: 2px 6px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  text-decoration: none;
+}
+
+/* Platform */
+.journey-platform-col {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  min-width: 44px;
+  flex-shrink: 0;
+  justify-content: flex-end;
+}
+
+.journey-platform {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.journey-platform-changed {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--sbb-red);
+  background: rgba(235, 0, 0, 0.12);
+  padding: 1px 4px;
+  border-radius: 4px;
+}
+
+/* Mobile adjustments */
+@media (max-width: 480px) {
+  .journey-row {
+    gap: 8px;
+    padding: 10px 12px;
+  }
+
+  .journey-time-col {
+    min-width: 68px;
+  }
+
+  .journey-badge {
+    min-width: 36px;
+    font-size: 0.72rem;
+    padding: 2px 6px;
+  }
+
+  .journey-destination-text {
+    font-size: 0.88rem;
+  }
+
+  .journey-platform-col {
+    min-width: 36px;
+  }
+}

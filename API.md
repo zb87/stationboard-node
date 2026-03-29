@@ -6,7 +6,7 @@
 
 Returns departures or arrivals for a station.
 
-- **stationId** — Station ID (e.g. `8503000` for Zürich HB)
+- **stationId** — Station ID. Supports both numeric format (e.g. `8503000` for Zürich HB) and SLOID format (e.g. `ch:1:sloid:3000:6:11`)
 - **type** — `departure` or `arrival`
 
 **Query Parameters:**

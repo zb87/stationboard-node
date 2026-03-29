@@ -1,0 +1,118 @@
+.station-board {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+}
+
+.station-board::-webkit-scrollbar {
+  width: 6px;
+}
+
+.station-board::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.station-board::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+}
+
+.scroll-sentinel {
+  height: 1px;
+  width: 100%;
+}
+
+/* Date headers */
+.date-header {
+  padding: 8px 16px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* Loading indicators */
+.loading-indicator {
+  display: flex;
+  justify-content: center;
+  padding: 16px;
+}
+
+.loading-dots {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.loading-dots span {
+  width: 8px;
+  height: 8px;
+  background: var(--text-muted);
+  border-radius: 50%;
+  animation: loadingDot 1.2s ease-in-out infinite;
+}
+
+.loading-dots span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.loading-dots span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes loadingDot {
+  0%, 80%, 100% {
+    opacity: 0.3;
+    transform: scale(0.7);
+  }
+  40% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Error banner */
+.error-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  margin: 8px 16px;
+  background: rgba(235, 0, 0, 0.1);
+  border: 1px solid rgba(235, 0, 0, 0.25);
+  border-radius: 10px;
+  color: var(--sbb-red);
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.error-icon {
+  font-size: 1.1rem;
+}
+
+/* Empty state */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 64px 16px;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+}
+
+.empty-icon {
+  font-size: 2.5rem;
+}
