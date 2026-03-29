@@ -271,7 +271,7 @@ export default function JourneyDetail({ journey, onBack, onStopClick }) {
               {journey.name}
             </div>
             <span className="header-station" style={{ fontSize: '1.1rem' }}>
-              → {destination}
+              {destination}
             </span>
           </div>
           <span className="journey-detail-subtitle">Journey details</span>

@@ -295,19 +295,6 @@
   animation: trainPulse 2s ease-in-out infinite;
 }
 
-.train-between-dot {
-  position: absolute;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: var(--sbb-red);
-  box-shadow: 0 0 8px rgba(235, 0, 0, 0.5), 0 0 20px rgba(235, 0, 0, 0.2);
-  z-index: 5;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  animation: trainPulse 2s ease-in-out infinite;
-}
-
 @keyframes trainPulse {
   0%, 100% {
     box-shadow: 0 0 8px rgba(235, 0, 0, 0.5), 0 0 20px rgba(235, 0, 0, 0.2);
