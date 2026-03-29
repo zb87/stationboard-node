@@ -11,7 +11,7 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 14px 16px;
+  padding: calc(env(safe-area-inset-top, 0px) + 14px) 16px 14px;
   background: var(--glass-bg);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
@@ -354,7 +354,7 @@
   }
 
   .journey-detail-header {
-    padding: 12px;
+    padding: calc(env(safe-area-inset-top, 0px) + 12px) 12px 12px;
   }
 }
 
