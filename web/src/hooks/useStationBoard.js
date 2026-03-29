@@ -199,14 +199,28 @@ export function useStationBoard(type, stationId = DEFAULT_STATION_ID) {
           break;
         }
 
-        if (hasOverlap(data) || attempt === maxRetries - 1) {
-          // Results overlap with our existing data — merge them
-          mergeAndSet(data);
+        const overlap = hasOverlap(data);
+        const added = mergeAndSet(data);
+
+        if (overlap && added > 0) {
+          // Partial overlap — we found the boundary, done
           break;
         }
 
-        // No overlap — gap was too large, drop results and retry with half the gap
-        gapMs = Math.max(gapMs / 2, 60000); // minimum 1 minute
+        if (overlap && added === 0) {
+          // All items already seen — gap too small, go further back
+          gapMs = gapMs * 2;
+          continue;
+        }
+
+        if (!overlap && attempt < maxRetries - 1) {
+          // No overlap — gap too large, halve it and retry
+          gapMs = Math.max(gapMs / 2, 60000); // minimum 1 minute
+          continue;
+        }
+
+        // Last attempt — keep whatever we got
+        break;
       }
     } catch (err) {
       setError(err.message);
