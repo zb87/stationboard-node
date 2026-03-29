@@ -118,6 +118,16 @@ export default function App() {
     });
   }, []);
 
+  const handleReorderBookmarks = useCallback((fromIdx, toIdx) => {
+    setBookmarks((prev) => {
+      const next = [...prev];
+      const [moved] = next.splice(fromIdx, 1);
+      next.splice(toIdx, 0, moved);
+      saveBookmarks(next);
+      return next;
+    });
+  }, []);
+
   const handleJourneyClick = useCallback((journey) => {
     setNavStack((prev) => [
       ...prev,
@@ -162,6 +172,7 @@ export default function App() {
           onSelectStation={handleBookmarkSelect}
           onBack={handleBack}
           onRemoveBookmark={handleRemoveBookmark}
+          onReorderBookmarks={handleReorderBookmarks}
         />
       </div>
     );

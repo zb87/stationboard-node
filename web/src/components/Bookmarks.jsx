@@ -1,8 +1,102 @@
+import { useState, useRef, useCallback } from 'react';
 import './Bookmarks.css';
 
-export default function Bookmarks({ bookmarks, onSelectStation, onBack, onRemoveBookmark }) {
+export default function Bookmarks({ bookmarks, onSelectStation, onBack, onRemoveBookmark, onReorderBookmarks }) {
+  const [dragIdx, setDragIdx] = useState(null);
+  const [overIdx, setOverIdx] = useState(null);
+  const listRef = useRef(null);
+
+  // ── Pointer-based drag (works on both touch and mouse) ──
+  const pointerState = useRef(null);
+
+  const handleDragHandlePointerDown = useCallback((e, idx) => {
+    // Only primary button / single touch
+    if (e.button !== 0 && e.pointerType === 'mouse') return;
+    e.preventDefault();
+    e.stopPropagation();
+
+    const listEl = listRef.current;
+    if (!listEl) return;
+
+    const items = listEl.querySelectorAll('.bookmark-item');
+    const rects = Array.from(items).map((el) => el.getBoundingClientRect());
+
+    pointerState.current = {
+      pointerId: e.pointerId,
+      startY: e.clientY,
+      fromIdx: idx,
+      rects,
+    };
+
+    setDragIdx(idx);
+    setOverIdx(idx);
+
+    // Capture so we get move/up even outside the element
+    e.currentTarget.setPointerCapture(e.pointerId);
+  }, []);
+
+  const handlePointerMove = useCallback((e) => {
+    const ps = pointerState.current;
+    if (!ps || e.pointerId !== ps.pointerId) return;
+
+    const y = e.clientY;
+    // Determine which slot the pointer is over
+    let newOver = ps.fromIdx;
+    for (let i = 0; i < ps.rects.length; i++) {
+      const r = ps.rects[i];
+      const midY = r.top + r.height / 2;
+      if (y < midY) {
+        newOver = i;
+        break;
+      }
+      newOver = i;
+    }
+    setOverIdx(newOver);
+  }, []);
+
+  const handlePointerUp = useCallback((e) => {
+    const ps = pointerState.current;
+    if (!ps || e.pointerId !== ps.pointerId) return;
+
+    const from = ps.fromIdx;
+    pointerState.current = null;
+
+    // Compute final drop index from current overIdx
+    setOverIdx((currentOver) => {
+      const to = currentOver ?? from;
+      if (from !== to && onReorderBookmarks) {
+        onReorderBookmarks(from, to);
+      }
+      return null;
+    });
+    setDragIdx(null);
+  }, [onReorderBookmarks]);
+
+  const handlePointerCancel = useCallback((e) => {
+    const ps = pointerState.current;
+    if (!ps || e.pointerId !== ps.pointerId) return;
+    pointerState.current = null;
+    setDragIdx(null);
+    setOverIdx(null);
+  }, []);
+
+  // Build the display order for the visual preview
+  const displayOrder = (() => {
+    const ordered = bookmarks.map((b, i) => ({ ...b, _origIdx: i }));
+    if (dragIdx != null && overIdx != null && dragIdx !== overIdx) {
+      const item = ordered.splice(dragIdx, 1)[0];
+      ordered.splice(overIdx, 0, item);
+    }
+    return ordered;
+  })();
+
   return (
-    <div className="bookmarks-page">
+    <div
+      className="bookmarks-page"
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerCancel}
+    >
       <header className="bookmarks-header">
         <button
           className="bookmarks-back-btn"
@@ -17,7 +111,7 @@ export default function Bookmarks({ bookmarks, onSelectStation, onBack, onRemove
         <h1 className="bookmarks-title">Bookmarks</h1>
       </header>
 
-      <div className="bookmarks-list">
+      <div className="bookmarks-list" ref={listRef}>
         {bookmarks.length === 0 ? (
           <div className="bookmarks-empty">
             <span className="bookmarks-empty-icon">
@@ -31,35 +125,57 @@ export default function Bookmarks({ bookmarks, onSelectStation, onBack, onRemove
             </span>
           </div>
         ) : (
-          bookmarks.map((bookmark) => (
-            <div
-              key={bookmark.id}
-              className="bookmark-item"
-              onClick={() => onSelectStation(bookmark)}
-              id={`bookmark-${bookmark.id}`}
-            >
-              <div className="bookmark-item-content">
-                <svg className="bookmark-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
-                </svg>
-                <span className="bookmark-item-name">{bookmark.name}</span>
-              </div>
-              <button
-                className="bookmark-remove-btn"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onRemoveBookmark(bookmark.id);
+          displayOrder.map((bookmark) => {
+            const isDragging = dragIdx != null && bookmark._origIdx === dragIdx;
+            return (
+              <div
+                key={bookmark.id}
+                className={`bookmark-item${isDragging ? ' bookmark-dragging' : ''}`}
+                onClick={() => {
+                  if (dragIdx == null) onSelectStation(bookmark);
                 }}
-                aria-label={`Remove ${bookmark.name} from bookmarks`}
-                id={`remove-bookmark-${bookmark.id}`}
+                id={`bookmark-${bookmark.id}`}
               >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="18" y1="6" x2="6" y2="18" />
-                  <line x1="6" y1="6" x2="18" y2="18" />
-                </svg>
-              </button>
-            </div>
-          ))
+                {/* Drag handle */}
+                <button
+                  className="bookmark-drag-handle"
+                  onPointerDown={(e) => handleDragHandlePointerDown(e, displayOrder.indexOf(bookmark))}
+                  aria-label={`Reorder ${bookmark.name}`}
+                  tabIndex={-1}
+                >
+                  <svg viewBox="0 0 24 24" fill="currentColor">
+                    <circle cx="9" cy="6" r="1.5" />
+                    <circle cx="15" cy="6" r="1.5" />
+                    <circle cx="9" cy="12" r="1.5" />
+                    <circle cx="15" cy="12" r="1.5" />
+                    <circle cx="9" cy="18" r="1.5" />
+                    <circle cx="15" cy="18" r="1.5" />
+                  </svg>
+                </button>
+
+                <div className="bookmark-item-content">
+                  <svg className="bookmark-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+                  </svg>
+                  <span className="bookmark-item-name">{bookmark.name}</span>
+                </div>
+                <button
+                  className="bookmark-remove-btn"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onRemoveBookmark(bookmark.id);
+                  }}
+                  aria-label={`Remove ${bookmark.name} from bookmarks`}
+                  id={`remove-bookmark-${bookmark.id}`}
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                </button>
+              </div>
+            );
+          })
         )}
       </div>
     </div>

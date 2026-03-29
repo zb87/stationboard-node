@@ -64,11 +64,13 @@
 .bookmark-item {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 14px 16px;
+  gap: 4px;
+  padding: 14px 16px 14px 8px;
   border-bottom: 1px solid var(--row-border);
   cursor: pointer;
-  transition: background 0.15s ease;
+  transition: background 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .bookmark-item:hover {
@@ -77,6 +79,48 @@
 
 .bookmark-item:active {
   background: rgba(255, 255, 255, 0.06);
+}
+
+.bookmark-item.bookmark-dragging {
+  background: var(--bg-card);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  transform: scale(1.02);
+  z-index: 10;
+  position: relative;
+  border-radius: 8px;
+}
+
+/* ===== Drag Handle ===== */
+.bookmark-drag-handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: grab;
+  flex-shrink: 0;
+  touch-action: none;
+  transition: color 0.15s ease, background 0.15s ease;
+  padding: 0;
+}
+
+.bookmark-drag-handle:hover {
+  color: var(--text-secondary);
+  background: var(--btn-bg);
+}
+
+.bookmark-drag-handle:active {
+  cursor: grabbing;
+  color: var(--text-primary);
+}
+
+.bookmark-drag-handle svg {
+  width: 16px;
+  height: 16px;
 }
 
 .bookmark-item-content {
