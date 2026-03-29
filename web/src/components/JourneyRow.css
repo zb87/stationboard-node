@@ -34,7 +34,7 @@
   display: flex;
   align-items: baseline;
   gap: 4px;
-  min-width: 80px;
+  width: 90px;
   flex-shrink: 0;
 }
 
@@ -181,7 +181,7 @@
   }
 
   .journey-time-col {
-    min-width: 68px;
+    width: 78px;
   }
 
   .journey-badge {
