@@ -235,7 +235,6 @@ export default function App() {
             )}
             <div className="header-title-group">
               <h1 className="header-station">{currentStation.name}</h1>
-              <span className="header-subtitle">Stationboard</span>
             </div>
           </div>
 
