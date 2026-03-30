@@ -58,6 +58,7 @@ export default function Search({ onSelectStation, onBack }) {
   const [results, setResults] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [locating, setLocating] = useState(false);
   const inputRef = useRef(null);
   const abortRef = useRef(null);
 
@@ -128,6 +129,65 @@ export default function Search({ onSelectStation, onBack }) {
     inputRef.current?.focus();
   }, []);
 
+  const handleLocate = useCallback(() => {
+    if (!navigator.geolocation) {
+      setError('Geolocation not supported');
+      return;
+    }
+    setLocating(true);
+    setError(null);
+    setQuery('');
+    setResults(null);
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude, longitude, accuracy } = pos.coords;
+        const latlon = `${latitude},${longitude}`;
+        const params = new URLSearchParams({ latlon });
+        if (accuracy != null) params.set('accuracy', Math.round(accuracy).toString());
+
+        if (abortRef.current) abortRef.current.abort();
+        const controller = new AbortController();
+        abortRef.current = controller;
+
+        setIsLoading(true);
+        fetch(`/search?${params}`, { signal: controller.signal })
+          .then((res) => {
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            return res.json();
+          })
+          .then((data) => {
+            setResults(data);
+            setIsLoading(false);
+            setLocating(false);
+          })
+          .catch((err) => {
+            if (err.name === 'AbortError') return;
+            setError(err.message);
+            setIsLoading(false);
+            setLocating(false);
+          });
+      },
+      (err) => {
+        setLocating(false);
+        switch (err.code) {
+          case err.PERMISSION_DENIED:
+            setError('Location permission denied');
+            break;
+          case err.POSITION_UNAVAILABLE:
+            setError('Location unavailable');
+            break;
+          case err.TIMEOUT:
+            setError('Location request timed out');
+            break;
+          default:
+            setError('Could not get location');
+        }
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  }, []);
+
   return (
     <div className="search-page">
       <header className="search-header">
@@ -175,6 +235,21 @@ export default function Search({ onSelectStation, onBack }) {
             </svg>
           </button>
         )}
+        <button
+          className={`search-locate-btn${locating ? ' locating' : ''}`}
+          onClick={handleLocate}
+          aria-label="Use my location"
+          id="search-locate-btn"
+          disabled={locating}
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="4" />
+            <path d="M12 2v4" />
+            <path d="M12 18v4" />
+            <path d="M2 12h4" />
+            <path d="M18 12h4" />
+          </svg>
+        </button>
       </div>
 
       <div className="search-results">
