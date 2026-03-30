@@ -72,6 +72,44 @@ curl http://localhost:3000/journey/ch:1:sjyid:100001:27-003/2026-03-22
 ]
 ```
 
+### `GET /search`
+
+Search for stations and stops by name or coordinates.
+
+**Query Parameters:**
+
+| Parameter  | Required | Description                                                                 |
+|------------|----------|-----------------------------------------------------------------------------|
+| `text`     | No*      | Search term (e.g. `Bern`). Returns stations matching the text.              |
+| `latlon`   | No*      | `lat,lon` coordinate pair (e.g. `46.948004,7.448134`).                      |
+| `accuracy` | No       | Accuracy in meters. Used together with `latlon` (e.g. `10`).               |
+
+> \* Exactly one of `text` or `latlon` must be provided.
+
+**Response:** `SearchResult[]`
+
+```bash
+# Search by text
+curl http://localhost:3000/search?text=Bern
+
+# Search by coordinates
+curl "http://localhost:3000/search?latlon=46.948004,7.448134&accuracy=10"
+```
+
+```json
+[
+  { "label": "Bern", "id": "8507000", "iconclass": "sl-icon-type-train" },
+  { "label": "Bern, Bahnhof", "id": "8507100", "iconclass": "sl-icon-type-tram" }
+]
+```
+
+```json
+[
+  { "label": "Zytgloggelaube, Bern", "id": "8507110", "dist": 15, "iconclass": "sl-icon-type-adr" },
+  { "label": "Bern, Zytglogge", "id": "8507110", "dist": 51, "iconclass": "sl-icon-type-tram" }
+]
+```
+
 ## Data Types
 
 ```typescript
@@ -98,4 +136,11 @@ interface Stop {
 
 interface DepartureArrivalTime { planned?: string; estimated?: string; }
 interface Platform { planned?: string; estimated?: string; }
+
+interface SearchResult {
+  label: string;
+  id?: string;
+  iconclass?: string;
+  dist?: number;
+}
 ```
