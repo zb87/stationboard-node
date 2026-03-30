@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import StationBoard from './components/StationBoard.jsx';
 import JourneyDetail from './components/JourneyDetail.jsx';
 import Bookmarks from './components/Bookmarks.jsx';
+import Search from './components/Search.jsx';
 import { useStationBoard } from './hooks/useStationBoard.js';
 import './App.css';
 
@@ -148,6 +149,18 @@ export default function App() {
     setNavStack((prev) => [...prev, { view: 'bookmarks' }]);
   }, []);
 
+  const handleOpenSearch = useCallback(() => {
+    setNavStack((prev) => [...prev, { view: 'search' }]);
+  }, []);
+
+  const handleSearchSelect = useCallback((station) => {
+    setNavStack((prev) => [
+      ...prev,
+      { view: 'station', station: { id: station.id, name: station.name } },
+    ]);
+    setType('departure');
+  }, []);
+
   const handleBookmarkSelect = useCallback((bookmark) => {
     setNavStack((prev) => [
       ...prev,
@@ -161,6 +174,18 @@ export default function App() {
   }, []);
 
   const canGoBack = navStack.length > 1;
+
+  // ── Search view ──
+  if (current.view === 'search') {
+    return (
+      <div className="app">
+        <Search
+          onSelectStation={handleSearchSelect}
+          onBack={handleBack}
+        />
+      </div>
+    );
+  }
 
   // ── Bookmarks view ──
   if (current.view === 'bookmarks') {
@@ -266,7 +291,7 @@ export default function App() {
                     className="overflow-menu-item"
                     role="menuitem"
                     id="menu-search"
-                    onClick={() => setMenuOpen(false)}
+                    onClick={() => { setMenuOpen(false); handleOpenSearch(); }}
                   >
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <circle cx="11" cy="11" r="8" />
