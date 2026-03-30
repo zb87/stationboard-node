@@ -8,10 +8,10 @@ function extractText(element) {
   if (typeof element === 'string') return element;
   if (element.Text) {
     if (typeof element.Text === 'string') return element.Text;
-    if (element.Text['#text']) return element.Text['#text'];
+    if (element.Text['#text'] != null) return String(element.Text['#text']);
     return String(element.Text);
   }
-  if (element['#text']) return element['#text'];
+  if (element['#text'] != null) return String(element['#text']);
   return String(element);
 }
 
