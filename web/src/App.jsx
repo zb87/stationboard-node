@@ -54,7 +54,7 @@ export default function App() {
   const current = navStack[navStack.length - 1];
   const currentStation = current.station || DEFAULT_STATION;
 
-  const { journeys, isLoadingTop, isLoadingBottom, error, loadFuture, loadPast } =
+  const { journeys, isLoadingTop, isLoadingBottom, error, loadFuture, loadPast, refresh } =
     useStationBoard(type, currentStation.id);
 
   // Persist the last viewed station whenever it changes
@@ -286,6 +286,19 @@ export default function App() {
 
               {menuOpen && (
                 <div className="overflow-menu" role="menu" id="overflow-menu">
+                  <button
+                    className="overflow-menu-item"
+                    role="menuitem"
+                    id="menu-refresh"
+                    onClick={() => { setMenuOpen(false); refresh(); }}
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="23 4 23 10 17 10" />
+                      <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+                    </svg>
+                    Refresh
+                  </button>
+                  <div className="overflow-menu-divider" />
                   <button
                     className="overflow-menu-item"
                     role="menuitem"

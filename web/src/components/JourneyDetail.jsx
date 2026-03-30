@@ -245,6 +245,7 @@ export default function JourneyDetail({ journey, onBack, onStopClick }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [now, setNow] = useState(new Date());
+  const [refreshKey, setRefreshKey] = useState(0);
 
   // Fetch stops on mount
   useEffect(() => {
@@ -269,7 +270,7 @@ export default function JourneyDetail({ journey, onBack, onStopClick }) {
     }
     load();
     return () => { cancelled = true; };
-  }, [journey.journeyRef, journey.operatingDayRef]);
+  }, [journey.journeyRef, journey.operatingDayRef, refreshKey]);
 
   // Update "now" every 10s for live train position
   useEffect(() => {
@@ -302,6 +303,17 @@ export default function JourneyDetail({ journey, onBack, onStopClick }) {
           </div>
           <span className="journey-detail-subtitle">Journey details</span>
         </div>
+        <button
+          className="journey-detail-refresh"
+          onClick={() => setRefreshKey((k) => k + 1)}
+          aria-label="Refresh journey"
+          id="journey-refresh-btn"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="23 4 23 10 17 10" />
+            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+          </svg>
+        </button>
       </div>
 
       {loading && (

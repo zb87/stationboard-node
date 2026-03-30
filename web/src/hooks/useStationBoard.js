@@ -230,6 +230,15 @@ export function useStationBoard(type, stationId = DEFAULT_STATION_ID) {
     }
   }, [type, stationId, mergeAndSet, hasOverlap]);
 
+  const refresh = useCallback(() => {
+    seenKeys.current.clear();
+    journeysRef.current = [];
+    setJourneys([]);
+    setError(null);
+    loadingRef.current = { top: false, bottom: false };
+    loadInitial(type);
+  }, [type, loadInitial]);
+
   return {
     journeys,
     isLoadingTop,
@@ -237,5 +246,6 @@ export function useStationBoard(type, stationId = DEFAULT_STATION_ID) {
     error,
     loadFuture,
     loadPast,
+    refresh,
   };
 }

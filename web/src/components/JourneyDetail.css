@@ -53,6 +53,36 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
+  flex: 1;
+}
+
+.journey-detail-refresh {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 10px;
+  background: var(--btn-bg);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.journey-detail-refresh:hover {
+  background: var(--btn-hover-bg);
+}
+
+.journey-detail-refresh:active {
+  transform: scale(0.93);
+}
+
+.journey-detail-refresh svg {
+  width: 18px;
+  height: 18px;
 }
 
 .journey-detail-title {
