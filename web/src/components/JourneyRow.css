@@ -83,7 +83,8 @@
   color: #fff;
 }
 
-.badge-intercity {
+.badge-intercity,
+.badge-interregio {
   background: linear-gradient(135deg, #dc2626, #b91c1c);
   color: #fff;
 }

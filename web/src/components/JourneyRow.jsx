@@ -7,8 +7,9 @@ import './JourneyRow.css';
 function getServiceColorClass(name) {
   const n = (name || '').toUpperCase();
   if (n.startsWith('S')) return 'badge-sbahn';
-  if (n.startsWith('IR') || n.startsWith('IC') || n.startsWith('EC')) return 'badge-intercity';
-  if (n.startsWith('R') || n.startsWith('VAE') || n.startsWith('LIX')) return 'badge-regio';
+  if (n.startsWith('IC') || n.startsWith('EC')) return 'badge-intercity';
+  if (n.startsWith('IR') || n.startsWith('VAE') || n.startsWith('LIX')) return 'badge-interregio';
+  if (n.startsWith('R')) return 'badge-regio';
   if (n.startsWith('TGV') || n.startsWith('RJ')) return 'badge-highspeed';
   if (n.startsWith('T') || n.startsWith('TRAM')) return 'badge-tram';
   if (n.startsWith('B') || n.startsWith('BUS')) return 'badge-bus';
