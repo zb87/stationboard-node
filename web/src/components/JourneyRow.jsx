@@ -9,8 +9,8 @@ function getServiceColorClass(name) {
   if (n.startsWith('S')) return 'badge-sbahn';
   if (n.startsWith('IC') || n.startsWith('EC')) return 'badge-intercity';
   if (n.startsWith('IR') || n.startsWith('VAE') || n.startsWith('LIX')) return 'badge-interregio';
-  if (n.startsWith('R')) return 'badge-regio';
   if (n.startsWith('TGV') || n.startsWith('RJ')) return 'badge-highspeed';
+  if (n.startsWith('R')) return 'badge-regio';
   if (n.startsWith('T') || n.startsWith('TRAM')) return 'badge-tram';
   if (n.startsWith('B') || n.startsWith('BUS')) return 'badge-bus';
   return 'badge-default';
