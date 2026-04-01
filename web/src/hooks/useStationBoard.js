@@ -187,7 +187,8 @@ export function useStationBoard(type, stationId = DEFAULT_STATION_ID) {
 
     try {
       const avgGap = computeAverageGap(current, type);
-      let gapMs = avgGap * 30; // aim for ~30 results worth of time
+      const maxGapMs = 24 * 60 * 60 * 1000; // 24 hours
+      let gapMs = Math.min(avgGap * 30, maxGapMs); // aim for ~30 results worth of time
       const maxRetries = 5;
 
       for (let attempt = 0; attempt < maxRetries; attempt++) {
@@ -200,27 +201,26 @@ export function useStationBoard(type, stationId = DEFAULT_STATION_ID) {
         }
 
         const overlap = hasOverlap(data);
+
+        if (!overlap) {
+          // No overlap — data is bad (gap too large), discard and retry
+          if (attempt < maxRetries - 1) {
+            gapMs = Math.max(gapMs / 2, 60000); // minimum 1 minute
+            continue;
+          }
+          // Exhausted retries — discard bad data
+          break;
+        }
+
         const added = mergeAndSet(data);
 
-        if (overlap && added > 0) {
+        if (added > 0) {
           // Partial overlap — we found the boundary, done
           break;
         }
 
-        if (overlap && added === 0) {
-          // All items already seen — gap too small, go further back
-          gapMs = gapMs * 2;
-          continue;
-        }
-
-        if (!overlap && attempt < maxRetries - 1) {
-          // No overlap — gap too large, halve it and retry
-          gapMs = Math.max(gapMs / 2, 60000); // minimum 1 minute
-          continue;
-        }
-
-        // Last attempt — keep whatever we got
-        break;
+        // All items already seen — gap too small, go further back
+        gapMs = Math.min(gapMs * 2, maxGapMs);
       }
     } catch (err) {
       setError(err.message);
