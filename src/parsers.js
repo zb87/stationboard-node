@@ -75,10 +75,15 @@ function parseStopEventResult(result) {
   const service = stopEvent.Service || {};
   const thisCall = stopEvent.ThisCall;
 
+  const mode = service.Mode?.PtMode || '';
+  let name = extractText(service.PublishedServiceName) || extractText(service.PublishedLineName) || '';
+  if (mode === 'tram') name = `T${name}`;
+  else if (mode === 'bus') name = `B${name}`;
+
   const journey = {
     journeyRef: String(service.JourneyRef || ''),
     operatingDayRef: String(service.OperatingDayRef || ''),
-    name: extractText(service.PublishedServiceName) || extractText(service.PublishedLineName) || '',
+    name,
     origin: {
       name: extractText(service.OriginText),
       ref: String(service.OriginStopPointRef || ''),
