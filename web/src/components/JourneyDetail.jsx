@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { fetchJourneyStops } from '../utils/api.js';
 import { formatTime, getDelayMinutes } from '../utils/time.js';
+import { getServiceColorClass, isPlatformRefinement } from '../utils/service.js';
 import './JourneyDetail.css';
 
 /**
@@ -132,16 +133,7 @@ function TrainBetweenIndicator({ fraction }) {
   );
 }
 
-/**
- * Check if the estimated platform is a refinement of the planned platform.
- * e.g. planned="41/42" estimated="41" → refinement (just narrowing down)
- * e.g. planned="11" estimated="5" → real change
- */
-function isPlatformRefinement(planned, estimated) {
-  if (!planned || !estimated) return false;
-  const parts = String(planned).split('/').map((p) => p.trim());
-  return parts.includes(String(estimated).trim());
-}
+
 
 function StopRow({ stop, index, isFirst, isLast, position, onStopClick }) {
   const arrDelay = getDelayMinutes(stop.arrival?.planned, stop.arrival?.estimated);
@@ -301,7 +293,7 @@ export default function JourneyDetail({ journey, onBack, onStopClick }) {
               {destination}
             </span>
           </div>
-          <span className="journey-detail-subtitle">Journey details</span>
+
         </div>
         <button
           className="journey-detail-refresh"
@@ -361,16 +353,4 @@ export default function JourneyDetail({ journey, onBack, onStopClick }) {
   );
 }
 
-/**
- * Reuse the same badge color logic from JourneyRow.
- */
-function getServiceColorClass(name) {
-  const n = (name || '').toUpperCase();
-  if (n.startsWith('S')) return 'badge-sbahn';
-  if (n.startsWith('IR') || n.startsWith('IC') || n.startsWith('EC')) return 'badge-intercity';
-  if (n.startsWith('RE')) return 'badge-regio';
-  if (n.startsWith('TGV') || n.startsWith('RJ')) return 'badge-highspeed';
-  if (n.startsWith('T') || n.startsWith('TRAM')) return 'badge-tram';
-  if (n.startsWith('B') || n.startsWith('BUS')) return 'badge-bus';
-  return 'badge-default';
-}
+
