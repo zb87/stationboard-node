@@ -188,8 +188,11 @@ export function useStationBoard(type, stationId = DEFAULT_STATION_ID) {
     try {
       const avgGap = computeAverageGap(current, type);
       const maxGapMs = 24 * 60 * 60 * 1000; // 24 hours
+      const minGapMs = 60000; // 1 minute
       let gapMs = Math.min(avgGap * 30, maxGapMs); // aim for ~30 results worth of time
-      const maxRetries = 5;
+      let lo = null; // last known too-small gap
+      let hi = null; // last known too-large gap
+      const maxRetries = 8;
 
       for (let attempt = 0; attempt < maxRetries; attempt++) {
         const ts = new Date(new Date(earliestTime).getTime() - gapMs).toISOString();
@@ -203,9 +206,12 @@ export function useStationBoard(type, stationId = DEFAULT_STATION_ID) {
         const overlap = hasOverlap(data);
 
         if (!overlap) {
-          // No overlap — data is bad (gap too large), discard and retry
+          // No overlap — gap too large, narrow down
+          hi = gapMs;
           if (attempt < maxRetries - 1) {
-            gapMs = Math.max(gapMs / 2, 60000); // minimum 1 minute
+            gapMs = lo !== null
+              ? (lo + hi) / 2        // binary search midpoint
+              : Math.max(gapMs / 2, minGapMs);
             continue;
           }
           // Exhausted retries — discard bad data
@@ -220,7 +226,10 @@ export function useStationBoard(type, stationId = DEFAULT_STATION_ID) {
         }
 
         // All items already seen — gap too small, go further back
-        gapMs = Math.min(gapMs * 2, maxGapMs);
+        lo = gapMs;
+        gapMs = hi !== null
+          ? (lo + hi) / 2            // binary search midpoint
+          : Math.min(gapMs * 2, maxGapMs);
       }
     } catch (err) {
       setError(err.message);
