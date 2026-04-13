@@ -9,6 +9,8 @@ import './App.css';
 const DEFAULT_STATION = { id: '8503000', name: 'Zürich HB' };
 const BOOKMARKS_KEY = 'stationboard_bookmarks';
 const LAST_STATION_KEY = 'stationboard_last_station';
+const RECENT_KEY = 'stationboard_recent';
+const MAX_RECENT = 20;
 const BG_TIMEOUT_MS = 60_000; // 1 minute
 
 function loadBookmarks() {
@@ -39,10 +41,41 @@ function saveLastStation(station) {
   localStorage.setItem(LAST_STATION_KEY, JSON.stringify({ id: station.id, name: station.name }));
 }
 
+function loadRecent() {
+  try {
+    const raw = localStorage.getItem(RECENT_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveRecent(list) {
+  localStorage.setItem(RECENT_KEY, JSON.stringify(list));
+}
+
+/** Dedupe key for a recent entry. */
+function recentKey(entry) {
+  if (entry.type === 'station') return `station:${entry.id}`;
+  return `journey:${entry.journey.journeyRef}|${entry.journey.operatingDayRef}`;
+}
+
+/** Record a recently accessed station or journey. */
+function trackRecent(entry) {
+  const list = loadRecent();
+  const key = recentKey(entry);
+  const filtered = list.filter((e) => recentKey(e) !== key);
+  filtered.unshift({ ...entry, accessedAt: new Date().toISOString() });
+  const trimmed = filtered.slice(0, MAX_RECENT);
+  saveRecent(trimmed);
+  return trimmed;
+}
+
 export default function App() {
   const [type, setType] = useState('departure');
   const [menuOpen, setMenuOpen] = useState(false);
   const [bookmarks, setBookmarks] = useState(loadBookmarks);
+  const [recentAccesses, setRecentAccesses] = useState(loadRecent);
   const menuRef = useRef(null);
   const hiddenAtRef = useRef(null);
 
@@ -130,14 +163,25 @@ export default function App() {
   }, []);
 
   const handleJourneyClick = useCallback((journey) => {
-    setNavStack((prev) => [
-      ...prev,
-      { view: 'journey', journey, station: prev[prev.length - 1].station },
-    ]);
+    setNavStack((prev) => {
+      const station = prev[prev.length - 1].station;
+      setRecentAccesses(trackRecent({
+        type: 'journey',
+        journey: {
+          journeyRef: journey.journeyRef,
+          operatingDayRef: journey.operatingDayRef,
+          name: journey.name,
+          destination: journey.destination,
+        },
+        station: station ? { id: station.id, name: station.name } : undefined,
+      }));
+      return [...prev, { view: 'journey', journey, station }];
+    });
   }, []);
 
   const handleStopClick = useCallback((station) => {
     if (!station?.ref) return;
+    setRecentAccesses(trackRecent({ type: 'station', id: station.ref, name: station.name }));
     setNavStack((prev) => [
       ...prev,
       { view: 'station', station: { id: station.ref, name: station.name } },
@@ -154,6 +198,7 @@ export default function App() {
   }, []);
 
   const handleSearchSelect = useCallback((station) => {
+    setRecentAccesses(trackRecent({ type: 'station', id: station.id, name: station.name }));
     setNavStack((prev) => [
       ...prev,
       { view: 'station', station: { id: station.id, name: station.name } },
@@ -162,11 +207,25 @@ export default function App() {
   }, []);
 
   const handleBookmarkSelect = useCallback((bookmark) => {
+    setRecentAccesses(trackRecent({ type: 'station', id: bookmark.id, name: bookmark.name }));
     setNavStack((prev) => [
       ...prev,
       { view: 'station', station: { id: bookmark.id, name: bookmark.name } },
     ]);
     setType('departure');
+  }, []);
+
+  const handleRecentJourneySelect = useCallback((entry) => {
+    // Re-track to update accessedAt
+    setRecentAccesses(trackRecent(entry));
+    setNavStack((prev) => [
+      ...prev,
+      {
+        view: 'journey',
+        journey: entry.journey,
+        station: entry.station,
+      },
+    ]);
   }, []);
 
   const handleBack = useCallback(() => {
@@ -193,7 +252,9 @@ export default function App() {
       <div className="app">
         <Bookmarks
           bookmarks={bookmarks}
+          recentAccesses={recentAccesses}
           onSelectStation={handleBookmarkSelect}
+          onSelectJourney={handleRecentJourneySelect}
           onBack={handleBack}
           onRemoveBookmark={handleRemoveBookmark}
           onReorderBookmarks={handleReorderBookmarks}

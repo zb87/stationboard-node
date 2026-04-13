@@ -1,7 +1,18 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useMemo } from 'react';
+import { getServiceColorClass } from '../utils/service.js';
 import './Bookmarks.css';
 
-export default function Bookmarks({ bookmarks, onSelectStation, onBack, onRemoveBookmark, onReorderBookmarks }) {
+const SIX_HOURS_MS = 6 * 60 * 60 * 1000;
+
+export default function Bookmarks({
+  bookmarks,
+  recentAccesses = [],
+  onSelectStation,
+  onSelectJourney,
+  onBack,
+  onRemoveBookmark,
+  onReorderBookmarks,
+}) {
   const [dragIdx, setDragIdx] = useState(null);
   const [overIdx, setOverIdx] = useState(null);
   const listRef = useRef(null);
@@ -90,6 +101,26 @@ export default function Bookmarks({ bookmarks, onSelectStation, onBack, onRemove
     return ordered;
   })();
 
+  // ── Compute filtered recent accesses ──
+  const recentItems = useMemo(() => {
+    const now = Date.now();
+    const bookmarkIds = new Set(bookmarks.map((b) => b.id));
+
+    return recentAccesses
+      .filter((entry) => {
+        // Exclude stations already shown as bookmarks
+        if (entry.type === 'station' && bookmarkIds.has(entry.id)) return false;
+        // Exclude journeys accessed more than 6 hours ago
+        if (entry.type === 'journey') {
+          const age = now - new Date(entry.accessedAt).getTime();
+          if (age > SIX_HOURS_MS) return false;
+        }
+        return true;
+      })
+      // Already sorted by accessedAt (most recent first) from tracking
+      .slice(0, 10);
+  }, [recentAccesses, bookmarks]);
+
   return (
     <div
       className="bookmarks-page"
@@ -111,71 +142,136 @@ export default function Bookmarks({ bookmarks, onSelectStation, onBack, onRemove
         <h1 className="bookmarks-title">Bookmarks</h1>
       </header>
 
-      <div className="bookmarks-list" ref={listRef}>
-        {bookmarks.length === 0 ? (
-          <div className="bookmarks-empty">
-            <span className="bookmarks-empty-icon">
-              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
-              </svg>
-            </span>
-            <span className="bookmarks-empty-text">No bookmarks yet</span>
-            <span className="bookmarks-empty-hint">
-              Add stations to bookmarks from the station board menu
-            </span>
-          </div>
-        ) : (
-          displayOrder.map((bookmark) => {
-            const isDragging = dragIdx != null && bookmark._origIdx === dragIdx;
-            return (
-              <div
-                key={bookmark.id}
-                className={`bookmark-item${isDragging ? ' bookmark-dragging' : ''}`}
-                onClick={() => {
-                  if (dragIdx == null) onSelectStation(bookmark);
-                }}
-                id={`bookmark-${bookmark.id}`}
-              >
-                {/* Drag handle */}
-                <button
-                  className="bookmark-drag-handle"
-                  onPointerDown={(e) => handleDragHandlePointerDown(e, displayOrder.indexOf(bookmark))}
-                  aria-label={`Reorder ${bookmark.name}`}
-                  tabIndex={-1}
-                >
-                  <svg viewBox="0 0 24 24" fill="currentColor">
-                    <circle cx="9" cy="6" r="1.5" />
-                    <circle cx="15" cy="6" r="1.5" />
-                    <circle cx="9" cy="12" r="1.5" />
-                    <circle cx="15" cy="12" r="1.5" />
-                    <circle cx="9" cy="18" r="1.5" />
-                    <circle cx="15" cy="18" r="1.5" />
-                  </svg>
-                </button>
-
-                <div className="bookmark-item-content">
-                  <svg className="bookmark-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
-                  </svg>
-                  <span className="bookmark-item-name">{bookmark.name}</span>
-                </div>
-                <button
-                  className="bookmark-remove-btn"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onRemoveBookmark(bookmark.id);
+      <div className="bookmarks-scroll-area">
+        {/* ── Bookmarked stations ── */}
+        <div className="bookmarks-list" ref={listRef}>
+          {bookmarks.length === 0 ? (
+            <div className="bookmarks-empty">
+              <span className="bookmarks-empty-icon">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+                </svg>
+              </span>
+              <span className="bookmarks-empty-text">No bookmarks yet</span>
+              <span className="bookmarks-empty-hint">
+                Add stations to bookmarks from the station board menu
+              </span>
+            </div>
+          ) : (
+            displayOrder.map((bookmark) => {
+              const isDragging = dragIdx != null && bookmark._origIdx === dragIdx;
+              return (
+                <div
+                  key={bookmark.id}
+                  className={`bookmark-item${isDragging ? ' bookmark-dragging' : ''}`}
+                  onClick={() => {
+                    if (dragIdx == null) onSelectStation(bookmark);
                   }}
-                  aria-label={`Remove ${bookmark.name} from bookmarks`}
-                  id={`remove-bookmark-${bookmark.id}`}
+                  id={`bookmark-${bookmark.id}`}
                 >
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="18" y1="6" x2="6" y2="18" />
-                    <line x1="6" y1="6" x2="18" y2="18" />
-                  </svg>
-                </button>
-              </div>
-            );
-          })
+                  {/* Drag handle */}
+                  <button
+                    className="bookmark-drag-handle"
+                    onPointerDown={(e) => handleDragHandlePointerDown(e, displayOrder.indexOf(bookmark))}
+                    aria-label={`Reorder ${bookmark.name}`}
+                    tabIndex={-1}
+                  >
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                      <circle cx="9" cy="6" r="1.5" />
+                      <circle cx="15" cy="6" r="1.5" />
+                      <circle cx="9" cy="12" r="1.5" />
+                      <circle cx="15" cy="12" r="1.5" />
+                      <circle cx="9" cy="18" r="1.5" />
+                      <circle cx="15" cy="18" r="1.5" />
+                    </svg>
+                  </button>
+
+                  <div className="bookmark-item-content">
+                    <svg className="bookmark-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+                    </svg>
+                    <span className="bookmark-item-name">{bookmark.name}</span>
+                  </div>
+                  <button
+                    className="bookmark-remove-btn"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onRemoveBookmark(bookmark.id);
+                    }}
+                    aria-label={`Remove ${bookmark.name} from bookmarks`}
+                    id={`remove-bookmark-${bookmark.id}`}
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="18" y1="6" x2="6" y2="18" />
+                      <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                  </button>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* ── Recently Accessed ── */}
+        {recentItems.length > 0 && (
+          <div className="recent-section">
+            <h2 className="recent-section-title">
+              <svg className="recent-section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <polyline points="12 6 12 12 16 14" />
+              </svg>
+              Recent
+            </h2>
+            <div className="recent-list">
+              {recentItems.map((entry) => {
+                if (entry.type === 'station') {
+                  return (
+                    <div
+                      key={`recent-station-${entry.id}`}
+                      className="recent-item"
+                      onClick={() => onSelectStation(entry)}
+                      id={`recent-station-${entry.id}`}
+                    >
+                      <div className="recent-item-content">
+                        <svg className="recent-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                          <circle cx="12" cy="10" r="3" />
+                        </svg>
+                        <span className="recent-item-name">{entry.name}</span>
+                      </div>
+                      <svg className="recent-item-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="9 18 15 12 9 6" />
+                      </svg>
+                    </div>
+                  );
+                }
+
+                // Journey entry
+                const destName = entry.journey?.destination?.name || '';
+                return (
+                  <div
+                    key={`recent-journey-${entry.journey.journeyRef}-${entry.journey.operatingDayRef}`}
+                    className="recent-item recent-item-journey"
+                    onClick={() => onSelectJourney(entry)}
+                    id={`recent-journey-${entry.journey.journeyRef}`}
+                  >
+                    <div className="recent-item-content">
+                      <span className={`recent-journey-badge ${getServiceColorClass(entry.journey.name)}`}>
+                        {entry.journey.name}
+                      </span>
+                      <span className="recent-item-name">
+                        <span className="recent-journey-arrow">→</span>
+                        {destName}
+                      </span>
+                    </div>
+                    <svg className="recent-item-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="9 18 15 12 9 6" />
+                    </svg>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         )}
       </div>
     </div>
