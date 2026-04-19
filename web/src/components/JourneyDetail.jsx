@@ -70,12 +70,14 @@ function getTrainPosition(stops, now) {
       return { type: 'at', index: i };
     }
 
-    // Between this stop and the next
+    // Between this stop and the next:
+    // use departure of current stop → arrival of next stop
     if (i < stops.length - 1) {
-      const nextTime = times[i + 1];
-      if (nextTime !== null && times[i] !== null && nowMs >= times[i] && nowMs <= nextTime) {
-        const total = nextTime - times[i];
-        const elapsed = nowMs - times[i];
+      const depI = depTime(stops[i]) || times[i];
+      const arrNext = arrTime(stops[i + 1]) || times[i + 1];
+      if (depI !== null && arrNext !== null && nowMs >= depI && nowMs <= arrNext) {
+        const total = arrNext - depI;
+        const elapsed = nowMs - depI;
         const fraction = total > 0 ? elapsed / total : 0;
         return { type: 'between', fromIndex: i, toIndex: i + 1, fraction };
       }
