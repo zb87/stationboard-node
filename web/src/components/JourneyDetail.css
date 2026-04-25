@@ -451,11 +451,6 @@
   margin: -2px -4px;
 }
 
-.stop-station-link:hover {
-  color: var(--sbb-red);
-  background: var(--row-hover);
-}
-
 .stop-station-link:active {
   opacity: 0.7;
 }
