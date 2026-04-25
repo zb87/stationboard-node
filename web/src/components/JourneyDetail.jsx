@@ -17,65 +17,71 @@ import './JourneyDetail.css';
 function getTrainPosition(stops, now) {
   if (!stops || stops.length === 0) return null;
 
-  /** Get the "effective" time for a stop (use estimated if available, else planned) */
-  function effectiveTime(stop) {
-    const dep = stop.departure?.estimated || stop.departure?.planned;
-    const arr = stop.arrival?.estimated || stop.arrival?.planned;
-    // Use departure if available, fallback to arrival
-    return dep || arr;
+  const nowMs = now.getTime();
+  const WINDOW_MS = 30000; // 30 seconds
+
+  const getArr = (stop) => {
+    const a = stop.arrival?.estimated || stop.arrival?.planned;
+    return a ? new Date(a).getTime() : null;
+  };
+  const getDep = (stop) => {
+    const d = stop.departure?.estimated || stop.departure?.planned;
+    return d ? new Date(d).getTime() : null;
+  };
+
+  // 1. Check for "at" state first for all stops
+  // A train is at the stop if it's within (arrival - 30s) and (departure + 30s)
+  for (let i = 0; i < stops.length; i++) {
+    const arr = getArr(stops[i]);
+    const dep = getDep(stops[i]);
+
+    let startTime = null;
+    let endTime = null;
+
+    if (arr !== null && dep !== null) {
+      startTime = arr - WINDOW_MS;
+      endTime = dep + WINDOW_MS;
+    } else if (arr !== null) {
+      startTime = arr - WINDOW_MS;
+      endTime = arr + WINDOW_MS;
+    } else if (dep !== null) {
+      startTime = dep - WINDOW_MS;
+      endTime = dep + WINDOW_MS;
+    }
+
+    if (startTime !== null && endTime !== null && nowMs >= startTime && nowMs <= endTime) {
+      return { type: 'at', index: i };
+    }
   }
 
-  const times = stops.map((s) => {
-    const t = effectiveTime(s);
-    return t ? new Date(t).getTime() : null;
-  });
-
-  const nowMs = now.getTime();
-
-  // Before first stop
-  if (times[0] !== null && nowMs < times[0]) {
+  // 2. Check for "before" first stop
+  const firstArr = getArr(stops[0]);
+  const firstDep = getDep(stops[0]);
+  const firstStartTime = (firstArr || firstDep) - WINDOW_MS;
+  if (firstStartTime !== null && nowMs < firstStartTime) {
     return { type: 'before' };
   }
 
-  // After last stop
-  const lastIdx = times.length - 1;
-  if (times[lastIdx] !== null && nowMs > times[lastIdx]) {
+  // 3. Check for "after" last stop
+  const lastIdx = stops.length - 1;
+  const lastArr = getArr(stops[lastIdx]);
+  const lastDep = getDep(stops[lastIdx]);
+  const lastEndTime = (lastDep || lastArr) + WINDOW_MS;
+  if (lastEndTime !== null && nowMs > lastEndTime) {
     return { type: 'after' };
   }
 
-  // Find which segment we're in
-  for (let i = 0; i < stops.length; i++) {
-    if (times[i] === null) continue;
+  // 4. Check for "between" states
+  for (let i = 0; i < stops.length - 1; i++) {
+    const depI = getDep(stops[i]) || getArr(stops[i]);
+    const arrNext = getArr(stops[i + 1]) || getDep(stops[i + 1]);
 
-    // At this stop (within 30-second window)
-    const arrTime = stop => {
-      const a = stop.arrival?.estimated || stop.arrival?.planned;
-      return a ? new Date(a).getTime() : null;
-    };
-    const depTime = stop => {
-      const d = stop.departure?.estimated || stop.departure?.planned;
-      return d ? new Date(d).getTime() : null;
-    };
+    if (depI !== null && arrNext !== null) {
+      // The between state is strictly outside the "at" windows of station i and i+1
+      const betweenStart = depI + WINDOW_MS;
+      const betweenEnd = arrNext - WINDOW_MS;
 
-    const arr = arrTime(stops[i]);
-    const dep = depTime(stops[i]);
-
-    // If train is between arrival and departure of same stop
-    if (arr !== null && dep !== null && nowMs >= arr && nowMs <= dep) {
-      return { type: 'at', index: i };
-    }
-
-    // If only one of them and we're close
-    if (times[i] !== null && Math.abs(nowMs - times[i]) < 30000) {
-      return { type: 'at', index: i };
-    }
-
-    // Between this stop and the next:
-    // use departure of current stop → arrival of next stop
-    if (i < stops.length - 1) {
-      const depI = depTime(stops[i]) || times[i];
-      const arrNext = arrTime(stops[i + 1]) || times[i + 1];
-      if (depI !== null && arrNext !== null && nowMs >= depI && nowMs <= arrNext) {
+      if (nowMs > betweenStart && nowMs < betweenEnd) {
         const total = arrNext - depI;
         const elapsed = nowMs - depI;
         const fraction = total > 0 ? elapsed / total : 0;
