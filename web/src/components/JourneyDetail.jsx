@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { fetchJourneyStops } from '../utils/api.js';
-import { formatTime, getDelayMinutes } from '../utils/time.js';
+import { formatTime, getDelayMinutes, formatDelay } from '../utils/time.js';
 import { getServiceColorClass, isPlatformRefinement } from '../utils/service.js';
 import './JourneyDetail.css';
 
@@ -175,7 +175,7 @@ function StopRow({ stop, index, isFirst, isLast, position, onStopClick }) {
             </span>
             {arrDelay !== null && (
               <span className={`stop-delay ${arrDelay > 0 ? 'delay-late' : 'delay-early'}`}>
-                {arrDelay > 0 ? `+${arrDelay}` : arrDelay}
+                {formatDelay(stop.arrival.planned, stop.arrival.estimated)}
               </span>
             )}
           </div>
@@ -187,7 +187,7 @@ function StopRow({ stop, index, isFirst, isLast, position, onStopClick }) {
             </span>
             {depDelay !== null && (
               <span className={`stop-delay ${depDelay > 0 ? 'delay-late' : 'delay-early'}`}>
-                {depDelay > 0 ? `+${depDelay}` : depDelay}
+                {formatDelay(stop.departure.planned, stop.departure.estimated)}
               </span>
             )}
           </div>

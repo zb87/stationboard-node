@@ -201,7 +201,7 @@
   flex-direction: column;
   align-items: flex-start;
   justify-content: center;
-  width: 68px;
+  width: 88px;
   flex-shrink: 0;
   padding: 8px 0;
   gap: 1px;
@@ -210,7 +210,7 @@
 .stop-time-group {
   display: flex;
   align-items: baseline;
-  gap: 3px;
+  gap: 5px;
 }
 
 .stop-time {
@@ -422,7 +422,7 @@
   }
 
   .stop-time-col {
-    width: 60px;
+    width: 78px;
   }
 
   .stop-time {

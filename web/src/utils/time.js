@@ -27,6 +27,34 @@ export function getDelayMinutes(planned, estimated) {
 }
 
 /**
+ * Format the delay between planned and estimated times accurately.
+ * Under 10 minutes: +M.SS
+ * 10 minutes or more: +M (ignore seconds)
+ * @param {string} planned - ISO timestamp
+ * @param {string} estimated - ISO timestamp
+ * @returns {string|null}
+ */
+export function formatDelay(planned, estimated) {
+  if (!planned || !estimated) return null;
+  
+  const diffMs = new Date(estimated) - new Date(planned);
+  const diffSec = Math.round(diffMs / 1000);
+  
+  if (diffSec === 0) return null;
+  
+  const absSec = Math.abs(diffSec);
+  const mins = Math.floor(absSec / 60);
+  const secs = absSec % 60;
+  const sign = diffSec > 0 ? '+' : '-';
+  
+  if (mins >= 10) {
+    return `${sign}${mins}`;
+  } else {
+    return `${sign}${mins}.${secs.toString().padStart(2, '0')}`;
+  }
+}
+
+/**
  * Format a date to a human-readable date header (e.g., "Sat, 29 Mar").
  * @param {Date} date
  * @returns {string}

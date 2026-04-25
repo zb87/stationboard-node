@@ -1,4 +1,4 @@
-import { formatTime, getDelayMinutes } from '../utils/time.js';
+import { formatTime, getDelayMinutes, formatDelay } from '../utils/time.js';
 import { getServiceColorClass, isPlatformRefinement } from '../utils/service.js';
 import './JourneyRow.css';
 
@@ -31,7 +31,7 @@ export default function JourneyRow({ journey, type }) {
         <span className="journey-time">{formatTime(planned)}</span>
         {delay !== null && (
           <span className={`journey-delay ${delay > 0 ? 'delay-late' : 'delay-early'}`}>
-            {delay > 0 ? `+${delay}` : delay}
+            {formatDelay(planned, estimated)}
           </span>
         )}
       </div>
