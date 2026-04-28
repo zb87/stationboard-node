@@ -97,3 +97,20 @@ export async function fetchJourneyStops(journeyRef, operatingDayRef) {
   const url = `${API_BASE}/journey/${encodeURIComponent(journeyRef)}/${encodeURIComponent(operatingDayRef)}`;
   return dedupedFetch(url);
 }
+
+/**
+ * Search for stations by name or location.
+ * @param {string} [query]
+ * @param {string} [latlon] - "lat,lon"
+ * @param {number} [accuracy]
+ * @returns {Promise<import('./types').Station[]>}
+ */
+export async function searchStations(query, latlon, accuracy) {
+  const params = new URLSearchParams();
+  if (query) params.set('q', query);
+  if (latlon) params.set('latlon', latlon);
+  if (accuracy != null) params.set('accuracy', Math.round(accuracy).toString());
+  
+  const url = `${API_BASE}/search?${params.toString()}`;
+  return dedupedFetch(url);
+}

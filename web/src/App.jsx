@@ -4,6 +4,7 @@ import JourneyDetail from './components/JourneyDetail.jsx';
 import Bookmarks from './components/Bookmarks.jsx';
 import Search from './components/Search.jsx';
 import { useStationBoard } from './hooks/useStationBoard.js';
+import { searchStations } from './utils/api.js';
 import './App.css';
 
 const DEFAULT_STATION = { id: '8503000', name: 'Zürich HB' };
@@ -76,8 +77,10 @@ export default function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [bookmarks, setBookmarks] = useState(loadBookmarks);
   const [recentAccesses, setRecentAccesses] = useState(loadRecent);
+  const [isResettingNearby, setIsResettingNearby] = useState(false);
   const menuRef = useRef(null);
   const hiddenAtRef = useRef(null);
+  const resetAbortControllerRef = useRef(null);
 
   // Navigation stack: each entry is { view, station?, journey? }
   const [navStack, setNavStack] = useState(() => [
@@ -97,8 +100,70 @@ export default function App() {
     }
   }, [current.view, currentStation]);
 
-  // Reset nav stack when returning from background after >1 minute
+  // Reset nav stack when returning from background after >30 minutes
   useEffect(() => {
+    async function checkNearbyAndReset() {
+      // 1. Basic fallback if geolocation is not available or permission not granted
+      const fallback = () => {
+        const lastStation = loadLastStation();
+        setNavStack([{ view: 'station', station: lastStation }]);
+        setType('departure');
+        setIsResettingNearby(false);
+      };
+
+      if (!navigator.geolocation) {
+        fallback();
+        return;
+      }
+
+      try {
+        // Only proceed if permission was previously granted (don't prompt)
+        const permission = await navigator.permissions.query({ name: 'geolocation' });
+        if (permission.state !== 'granted') {
+          fallback();
+          return;
+        }
+      } catch (e) {
+        // Browser might not support permissions.query for geolocation
+        fallback();
+        return;
+      }
+
+      // 2. Start nearby search
+      setIsResettingNearby(true);
+      const controller = new AbortController();
+      resetAbortControllerRef.current = controller;
+
+      navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+          try {
+            const { latitude, longitude, accuracy } = pos.coords;
+            const latlon = `${latitude},${longitude}`;
+            const results = await searchStations(undefined, latlon, accuracy);
+
+            // Find bookmarked stations among search results
+            const bookmarkedIds = new Set(loadBookmarks().map(b => b.id));
+            const matches = results
+              .filter(s => bookmarkedIds.has(s.id))
+              .sort((a, b) => (a.dist ?? Infinity) - (b.dist ?? Infinity));
+
+            if (matches.length > 0) {
+              const bestMatch = matches[0];
+              setNavStack([{ view: 'station', station: { id: bestMatch.id, name: bestMatch.label } }]);
+              setType('departure');
+              setIsResettingNearby(false);
+            } else {
+              fallback();
+            }
+          } catch (err) {
+            if (err.name !== 'AbortError') fallback();
+          }
+        },
+        () => fallback(),
+        { timeout: 10000 }
+      );
+    }
+
     function handleVisibilityChange() {
       if (document.hidden) {
         hiddenAtRef.current = Date.now();
@@ -106,14 +171,26 @@ export default function App() {
         const elapsed = Date.now() - hiddenAtRef.current;
         hiddenAtRef.current = null;
         if (elapsed >= BG_TIMEOUT_MS) {
-          const lastStation = loadLastStation();
-          setNavStack([{ view: 'station', station: lastStation }]);
-          setType('departure');
+          checkNearbyAndReset();
         }
       }
     }
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      if (resetAbortControllerRef.current) resetAbortControllerRef.current.abort();
+    };
+  }, []);
+
+  const handleCancelReset = useCallback(() => {
+    if (resetAbortControllerRef.current) {
+      resetAbortControllerRef.current.abort();
+      resetAbortControllerRef.current = null;
+    }
+    const lastStation = loadLastStation();
+    setNavStack([{ view: 'station', station: lastStation }]);
+    setType('departure');
+    setIsResettingNearby(false);
   }, []);
 
   // Close overflow menu when clicking outside
@@ -233,6 +310,21 @@ export default function App() {
   }, []);
 
   const canGoBack = navStack.length > 1;
+
+  // ── Nearby Reset Loading ──
+  if (isResettingNearby) {
+    return (
+      <div className="full-screen-loader">
+        <div className="loader-content">
+          <div className="loader-spinner" />
+          <div className="loader-text">Loading nearby stations…</div>
+          <button className="loader-cancel-btn" onClick={handleCancelReset}>
+            Cancel
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   // ── Search view ──
   if (current.view === 'search') {
