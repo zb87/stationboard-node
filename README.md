@@ -24,6 +24,14 @@ npm run dev
 
 See [API.md](API.md) for endpoint documentation, examples, and data types.
 
+## Web Application Features
+
+### Inactivity Auto-Reset
+To ensure the user always sees relevant data, the web application automatically resets the view when returning from the background:
+- **Threshold**: 30 minutes.
+- **Behavior**: If the app is hidden (e.g., browser tab switched or phone locked) for 30 minutes or more, it resets to the main station board of the last viewed station, defaulting to "Departures".
+- **Implementation**: Managed via the `visibilitychange` event and `BG_TIMEOUT_MS` in `App.jsx`.
+
 ## Testing
 
 ```bash

@@ -11,7 +11,7 @@ const BOOKMARKS_KEY = 'stationboard_bookmarks';
 const LAST_STATION_KEY = 'stationboard_last_station';
 const RECENT_KEY = 'stationboard_recent';
 const MAX_RECENT = 20;
-const BG_TIMEOUT_MS = 60_000; // 1 minute
+const BG_TIMEOUT_MS = 30 * 60_000; // 30 minutes
 
 function loadBookmarks() {
   try {
