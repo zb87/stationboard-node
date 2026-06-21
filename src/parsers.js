@@ -114,6 +114,16 @@ function parseStopEventResult(result) {
 }
 
 /**
+ * Get the earliest planned time from a stop for sorting purposes.
+ * Uses departure time if available, otherwise arrival time.
+ */
+function getPlannedTime(stop) {
+  if (!stop) return null;
+  const time = stop.departure?.planned || stop.arrival?.planned;
+  return time ? new Date(time).getTime() : null;
+}
+
+/**
  * Parse a TripInfoResult into a Stop[] array.
  */
 function parseTripInfoResult(tripResult) {
@@ -142,6 +152,18 @@ function parseTripInfoResult(tripResult) {
   for (const call of onwardList) {
     stops.push(parseCallAtStop(call));
   }
+
+  // Sort stops by planned time. The OJP API may place cancelled stops in the
+  // wrong category (e.g. PreviousCall) even when their planned times are after
+  // the CurrentCall, causing incorrect visual ordering.
+  stops.sort((a, b) => {
+    const ta = getPlannedTime(a);
+    const tb = getPlannedTime(b);
+    if (ta === null && tb === null) return 0;
+    if (ta === null) return 1;
+    if (tb === null) return -1;
+    return ta - tb;
+  });
 
   return stops;
 }
