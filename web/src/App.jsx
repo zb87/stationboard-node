@@ -60,9 +60,38 @@ function saveRecent(list) {
   localStorage.setItem(RECENT_KEY, JSON.stringify(list));
 }
 
+/** Normalize a station ID (resolves SLOID vs numeric differences). */
+function normalizeStationId(id) {
+  if (!id) return '';
+  if (id.includes('sloid:')) {
+    const parts = id.split(':');
+    const idx = parts.indexOf('sloid');
+    if (idx !== -1 && parts[idx + 1]) {
+      const num = parts[idx + 1];
+      if (num.length === 4) {
+        return '850' + num;
+      }
+    }
+  }
+  return id;
+}
+
+/** Check if two stations represent the same station. */
+function isSameStation(aId, aName, bId, bName) {
+  if (aId && bId) {
+    const normA = normalizeStationId(aId);
+    const normB = normalizeStationId(bId);
+    if (normA === normB) return true;
+  }
+  if (aName && bName) {
+    return aName.toLowerCase().trim() === bName.toLowerCase().trim();
+  }
+  return false;
+}
+
 /** Dedupe key for a recent entry. */
 function recentKey(entry) {
-  if (entry.type === 'station') return `station:${entry.id}`;
+  if (entry.type === 'station') return `station:${normalizeStationId(entry.id)}`;
   return `journey:${entry.journey.journeyRef}|${entry.journey.operatingDayRef}`;
 }
 
@@ -165,14 +194,16 @@ export default function App() {
     const stationsToResolve = [];
     for (const b of bookmarks) {
       if (b.id && (b.lat == null || b.lon == null)) {
-        if (!resolvingIdsRef.current.has(b.id)) {
+        const normId = normalizeStationId(b.id);
+        if (!resolvingIdsRef.current.has(normId)) {
           stationsToResolve.push({ id: b.id, name: b.name });
         }
       }
     }
     for (const r of recentAccesses) {
       if (r.type === 'station' && r.id && (r.lat == null || r.lon == null)) {
-        if (!resolvingIdsRef.current.has(r.id)) {
+        const normId = normalizeStationId(r.id);
+        if (!resolvingIdsRef.current.has(normId)) {
           stationsToResolve.push({ id: r.id, name: r.name });
         }
       }
@@ -181,22 +212,33 @@ export default function App() {
     if (stationsToResolve.length === 0) return;
 
     const target = stationsToResolve[0];
-    resolvingIdsRef.current.add(target.id);
+    const targetNormId = normalizeStationId(target.id);
+    resolvingIdsRef.current.add(targetNormId);
 
     async function resolveCoordinates() {
       try {
         const res = await fetch(`/search?text=${encodeURIComponent(target.name)}`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const results = await res.json();
-        const match = results.find(item => item.id === target.id);
+        const match = results.find(item => 
+          isSameStation(item.id, item.label, target.id, target.name)
+        );
         if (match && match.lat != null && match.lon != null) {
           setBookmarks(prev => {
-            const next = prev.map(b => b.id === target.id ? { ...b, lat: match.lat, lon: match.lon } : b);
+            const next = prev.map(b => 
+              isSameStation(b.id, b.name, target.id, target.name)
+                ? { ...b, lat: match.lat, lon: match.lon }
+                : b
+            );
             saveBookmarks(next);
             return next;
           });
           setRecentAccesses(prev => {
-            const next = prev.map(r => r.type === 'station' && r.id === target.id ? { ...r, lat: match.lat, lon: match.lon } : r);
+            const next = prev.map(r => 
+              r.type === 'station' && isSameStation(r.id, r.name, target.id, target.name)
+                ? { ...r, lat: match.lat, lon: match.lon }
+                : r
+            );
             saveRecent(next);
             return next;
           });
@@ -221,13 +263,13 @@ export default function App() {
     return () => document.removeEventListener('pointerdown', handleClickOutside);
   }, [menuOpen]);
 
-  const isBookmarked = bookmarks.some((b) => b.id === currentStation.id);
+  const isBookmarked = bookmarks.some((b) => isSameStation(b.id, b.name, currentStation.id, currentStation.name));
 
   const handleToggleBookmark = useCallback(() => {
     setBookmarks((prev) => {
       let next;
-      if (prev.some((b) => b.id === currentStation.id)) {
-        next = prev.filter((b) => b.id !== currentStation.id);
+      if (prev.some((b) => isSameStation(b.id, b.name, currentStation.id, currentStation.name))) {
+        next = prev.filter((b) => !isSameStation(b.id, b.name, currentStation.id, currentStation.name));
       } else {
         next = [...prev, {
           id: currentStation.id,
@@ -562,15 +604,39 @@ export default function App() {
           .map(entry => ({ id: entry.id, name: entry.name, lat: entry.lat, lon: entry.lon }));
 
         const combined = [];
-        const seen = new Set();
+        const seenNames = new Set();
+        const seenIds = new Set();
+
         for (const s of [...bookmarks, ...recentStations]) {
-          if (s.id && !seen.has(s.id)) {
-            seen.add(s.id);
-            combined.push(s);
+          if (!s.id || !s.name) continue;
+
+          const normId = normalizeStationId(s.id);
+          const normName = s.name.toLowerCase().trim();
+
+          if (seenIds.has(normId) || seenNames.has(normName)) {
+            // Keep the one with coordinates if we have duplicates
+            const idx = combined.findIndex(existing => 
+              normalizeStationId(existing.id) === normId || 
+              existing.name.toLowerCase().trim() === normName
+            );
+            if (idx !== -1) {
+              const existing = combined[idx];
+              if ((existing.lat == null || existing.lon == null) && (s.lat != null && s.lon != null)) {
+                combined[idx] = s;
+              }
+            }
+            continue;
           }
+
+          seenIds.add(normId);
+          seenNames.add(normName);
+          combined.push(s);
         }
 
-        const candidates = combined.filter(s => s.id !== currentStation.id);
+        // Filter out current active station using isSameStation (which checks name & normalized ID)
+        const candidates = combined.filter(s => 
+          !isSameStation(s.id, s.name, currentStation.id, currentStation.name)
+        );
 
         const userLat = userLocation?.lat;
         const userLon = userLocation?.lon;
