@@ -7,12 +7,12 @@ import { useStationBoard } from './hooks/useStationBoard.js';
 import { searchStations } from './utils/api.js';
 import './App.css';
 
-const DEFAULT_STATION = { id: '8503000', name: 'Zürich HB' };
+const DEFAULT_STATION = { id: '8503000', name: 'Zürich HB', lat: 47.378177, lon: 8.540192 };
 const BOOKMARKS_KEY = 'stationboard_bookmarks';
 const LAST_STATION_KEY = 'stationboard_last_station';
 const RECENT_KEY = 'stationboard_recent';
 const MAX_RECENT = 20;
-const BG_TIMEOUT_MS = 30 * 60_000; // 30 minutes
+const BG_TIMEOUT_MS = 60_000; // 1 minute
 
 function loadBookmarks() {
   try {
@@ -39,7 +39,12 @@ function loadLastStation() {
 }
 
 function saveLastStation(station) {
-  localStorage.setItem(LAST_STATION_KEY, JSON.stringify({ id: station.id, name: station.name }));
+  localStorage.setItem(LAST_STATION_KEY, JSON.stringify({
+    id: station.id,
+    name: station.name,
+    lat: station.lat,
+    lon: station.lon
+  }));
 }
 
 function loadRecent() {
@@ -72,15 +77,29 @@ function trackRecent(entry) {
   return trimmed;
 }
 
+/** Calculate distance between two coordinates in meters. */
+function getDistance(lat1, lon1, lat2, lon2) {
+  if (lat1 == null || lon1 == null || lat2 == null || lon2 == null) return Infinity;
+  const R = 6371000;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = 
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+    Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+}
+
 export default function App() {
   const [type, setType] = useState('departure');
   const [menuOpen, setMenuOpen] = useState(false);
   const [bookmarks, setBookmarks] = useState(loadBookmarks);
   const [recentAccesses, setRecentAccesses] = useState(loadRecent);
-  const [isResettingNearby, setIsResettingNearby] = useState(false);
+  const [userLocation, setUserLocation] = useState(null);
   const menuRef = useRef(null);
   const hiddenAtRef = useRef(null);
-  const resetAbortControllerRef = useRef(null);
+  const resolvingIdsRef = useRef(new Set());
 
   // Navigation stack: each entry is { view, station?, journey? }
   const [navStack, setNavStack] = useState(() => [
@@ -100,98 +119,95 @@ export default function App() {
     }
   }, [current.view, currentStation]);
 
-  // Reset nav stack when returning from background after >30 minutes
+  const getPosition = useCallback(() => {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setUserLocation({
+          lat: pos.coords.latitude,
+          lon: pos.coords.longitude,
+          timestamp: Date.now(),
+        });
+      },
+      (err) => {
+        console.error('Error getting location:', err);
+      },
+      { timeout: 10000 }
+    );
+  }, []);
+
+  // Geolocation on start
   useEffect(() => {
-    async function checkNearbyAndReset() {
-      // 1. Basic fallback if geolocation is not available or permission not granted
-      const fallback = () => {
-        const lastStation = loadLastStation();
-        setNavStack([{ view: 'station', station: lastStation }]);
-        setType('departure');
-        setIsResettingNearby(false);
-      };
+    getPosition();
+  }, [getPosition]);
 
-      if (!navigator.geolocation) {
-        fallback();
-        return;
-      }
-
-      try {
-        // Only proceed if permission was previously granted (don't prompt)
-        const permission = await navigator.permissions.query({ name: 'geolocation' });
-        if (permission.state !== 'granted') {
-          fallback();
-          return;
-        }
-      } catch (e) {
-        // Browser might not support permissions.query for geolocation
-        fallback();
-        return;
-      }
-
-      // 2. Start nearby search
-      setIsResettingNearby(true);
-      const controller = new AbortController();
-      resetAbortControllerRef.current = controller;
-
-      navigator.geolocation.getCurrentPosition(
-        async (pos) => {
-          try {
-            const { latitude, longitude, accuracy } = pos.coords;
-            const latlon = `${latitude},${longitude}`;
-            const results = await searchStations(undefined, latlon, accuracy);
-
-            // Find bookmarked stations among search results
-            const bookmarkedIds = new Set(loadBookmarks().map(b => b.id));
-            const matches = results
-              .filter(s => bookmarkedIds.has(s.id))
-              .sort((a, b) => (a.dist ?? Infinity) - (b.dist ?? Infinity));
-
-            if (matches.length > 0) {
-              const bestMatch = matches[0];
-              setNavStack([{ view: 'station', station: { id: bestMatch.id, name: bestMatch.label } }]);
-              setType('departure');
-              setIsResettingNearby(false);
-            } else {
-              fallback();
-            }
-          } catch (err) {
-            if (err.name !== 'AbortError') fallback();
-          }
-        },
-        () => fallback(),
-        { timeout: 10000 }
-      );
-    }
-
+  // Geolocation on background return (> 1 minute)
+  useEffect(() => {
     function handleVisibilityChange() {
       if (document.hidden) {
         hiddenAtRef.current = Date.now();
       } else if (hiddenAtRef.current) {
         const elapsed = Date.now() - hiddenAtRef.current;
         hiddenAtRef.current = null;
-        if (elapsed >= BG_TIMEOUT_MS) {
-          checkNearbyAndReset();
+        if (elapsed > BG_TIMEOUT_MS) {
+          getPosition();
         }
       }
     }
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
-      if (resetAbortControllerRef.current) resetAbortControllerRef.current.abort();
     };
-  }, []);
+  }, [getPosition]);
 
-  const handleCancelReset = useCallback(() => {
-    if (resetAbortControllerRef.current) {
-      resetAbortControllerRef.current.abort();
-      resetAbortControllerRef.current = null;
+  // Background coordinate resolver
+  useEffect(() => {
+    const stationsToResolve = [];
+    for (const b of bookmarks) {
+      if (b.id && (b.lat == null || b.lon == null)) {
+        if (!resolvingIdsRef.current.has(b.id)) {
+          stationsToResolve.push({ id: b.id, name: b.name });
+        }
+      }
     }
-    const lastStation = loadLastStation();
-    setNavStack([{ view: 'station', station: lastStation }]);
-    setType('departure');
-    setIsResettingNearby(false);
-  }, []);
+    for (const r of recentAccesses) {
+      if (r.type === 'station' && r.id && (r.lat == null || r.lon == null)) {
+        if (!resolvingIdsRef.current.has(r.id)) {
+          stationsToResolve.push({ id: r.id, name: r.name });
+        }
+      }
+    }
+
+    if (stationsToResolve.length === 0) return;
+
+    const target = stationsToResolve[0];
+    resolvingIdsRef.current.add(target.id);
+
+    async function resolveCoordinates() {
+      try {
+        const res = await fetch(`/search?text=${encodeURIComponent(target.name)}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const results = await res.json();
+        const match = results.find(item => item.id === target.id);
+        if (match && match.lat != null && match.lon != null) {
+          setBookmarks(prev => {
+            const next = prev.map(b => b.id === target.id ? { ...b, lat: match.lat, lon: match.lon } : b);
+            saveBookmarks(next);
+            return next;
+          });
+          setRecentAccesses(prev => {
+            const next = prev.map(r => r.type === 'station' && r.id === target.id ? { ...r, lat: match.lat, lon: match.lon } : r);
+            saveRecent(next);
+            return next;
+          });
+        }
+      } catch (err) {
+        console.error(`Failed to resolve coordinates for station ${target.id}:`, err);
+      }
+    }
+
+    resolveCoordinates();
+  }, [bookmarks, recentAccesses]);
 
   // Close overflow menu when clicking outside
   useEffect(() => {
@@ -213,7 +229,12 @@ export default function App() {
       if (prev.some((b) => b.id === currentStation.id)) {
         next = prev.filter((b) => b.id !== currentStation.id);
       } else {
-        next = [...prev, { id: currentStation.id, name: currentStation.name }];
+        next = [...prev, {
+          id: currentStation.id,
+          name: currentStation.name,
+          lat: currentStation.lat,
+          lon: currentStation.lon
+        }];
       }
       saveBookmarks(next);
       return next;
@@ -258,10 +279,24 @@ export default function App() {
 
   const handleStopClick = useCallback((station) => {
     if (!station?.ref) return;
-    setRecentAccesses(trackRecent({ type: 'station', id: station.ref, name: station.name }));
+    setRecentAccesses(trackRecent({
+      type: 'station',
+      id: station.ref,
+      name: station.name,
+      lat: station.lat,
+      lon: station.lon
+    }));
     setNavStack((prev) => [
       ...prev,
-      { view: 'station', station: { id: station.ref, name: station.name } },
+      {
+        view: 'station',
+        station: {
+          id: station.ref,
+          name: station.name,
+          lat: station.lat,
+          lon: station.lon
+        }
+      },
     ]);
     setType('departure');
   }, []);
@@ -275,19 +310,70 @@ export default function App() {
   }, []);
 
   const handleSearchSelect = useCallback((station) => {
-    setRecentAccesses(trackRecent({ type: 'station', id: station.id, name: station.name }));
+    setRecentAccesses(trackRecent({
+      type: 'station',
+      id: station.id,
+      name: station.name,
+      lat: station.lat,
+      lon: station.lon
+    }));
     setNavStack((prev) => [
       ...prev,
-      { view: 'station', station: { id: station.id, name: station.name } },
+      {
+        view: 'station',
+        station: {
+          id: station.id,
+          name: station.name,
+          lat: station.lat,
+          lon: station.lon
+        }
+      },
     ]);
     setType('departure');
   }, []);
 
   const handleBookmarkSelect = useCallback((bookmark) => {
-    setRecentAccesses(trackRecent({ type: 'station', id: bookmark.id, name: bookmark.name }));
+    setRecentAccesses(trackRecent({
+      type: 'station',
+      id: bookmark.id,
+      name: bookmark.name,
+      lat: bookmark.lat,
+      lon: bookmark.lon
+    }));
     setNavStack((prev) => [
       ...prev,
-      { view: 'station', station: { id: bookmark.id, name: bookmark.name } },
+      {
+        view: 'station',
+        station: {
+          id: bookmark.id,
+          name: bookmark.name,
+          lat: bookmark.lat,
+          lon: bookmark.lon
+        }
+      },
+    ]);
+    setType('departure');
+  }, []);
+
+  const handleChipSelect = useCallback((station) => {
+    setRecentAccesses(trackRecent({
+      type: 'station',
+      id: station.id,
+      name: station.name,
+      lat: station.lat,
+      lon: station.lon
+    }));
+    setNavStack((prev) => [
+      ...prev,
+      {
+        view: 'station',
+        station: {
+          id: station.id,
+          name: station.name,
+          lat: station.lat,
+          lon: station.lon
+        }
+      },
     ]);
     setType('departure');
   }, []);
@@ -311,20 +397,7 @@ export default function App() {
 
   const canGoBack = navStack.length > 1;
 
-  // ── Nearby Reset Loading ──
-  if (isResettingNearby) {
-    return (
-      <div className="full-screen-loader">
-        <div className="loader-content">
-          <div className="loader-spinner" />
-          <div className="loader-text">Loading nearby stations…</div>
-          <button className="loader-cancel-btn" onClick={handleCancelReset}>
-            Cancel
-          </button>
-        </div>
-      </div>
-    );
-  }
+  // No full screen nearby reset loader used anymore
 
   // ── Search view ──
   if (current.view === 'search') {
@@ -482,6 +555,70 @@ export default function App() {
           </div>
         </div>
       </header>
+
+      {(() => {
+        const recentStations = recentAccesses
+          .filter(entry => entry.type === 'station')
+          .map(entry => ({ id: entry.id, name: entry.name, lat: entry.lat, lon: entry.lon }));
+
+        const combined = [];
+        const seen = new Set();
+        for (const s of [...bookmarks, ...recentStations]) {
+          if (s.id && !seen.has(s.id)) {
+            seen.add(s.id);
+            combined.push(s);
+          }
+        }
+
+        const candidates = combined.filter(s => s.id !== currentStation.id);
+
+        const userLat = userLocation?.lat;
+        const userLon = userLocation?.lon;
+
+        const sortedCandidates = candidates.map(s => {
+          let dist = Infinity;
+          if (userLat != null && userLon != null && s.lat != null && s.lon != null) {
+            dist = getDistance(userLat, userLon, s.lat, s.lon);
+          }
+          return { ...s, dist };
+        });
+
+        sortedCandidates.sort((a, b) => {
+          if (a.dist !== b.dist) {
+            return a.dist - b.dist;
+          }
+          return a.name.localeCompare(b.name);
+        });
+
+        const top10Nearby = sortedCandidates.slice(0, 10);
+
+        if (current.view === 'station' && top10Nearby.length > 0) {
+          return (
+            <div className="nearby-stations-row" id="nearby-stations-row">
+              {top10Nearby.map((station) => {
+                const hasDist = station.dist !== Infinity;
+                const distText = hasDist
+                  ? (station.dist < 1000
+                      ? `${Math.round(station.dist)}m`
+                      : `${(station.dist / 1000).toFixed(1)}km`)
+                  : null;
+                return (
+                  <button
+                    key={station.id}
+                    className="nearby-station-chip"
+                    onClick={() => handleChipSelect(station)}
+                    title={station.name}
+                  >
+                    <span className="chip-name">{station.name}</span>
+                    {hasDist && <span className="chip-dist">{distText}</span>}
+                  </button>
+                );
+              })}
+            </div>
+          );
+        }
+        return null;
+      })()}
 
       <main className="app-main">
         <div className="board-column-headers">

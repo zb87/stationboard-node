@@ -502,3 +502,78 @@ body {
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+
+/* ===== Nearby Stations Row & Chips ===== */
+.nearby-stations-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  overflow-x: auto;
+  white-space: nowrap;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-subtle);
+  scrollbar-width: none; /* Firefox */
+  -webkit-overflow-scrolling: touch;
+  flex-shrink: 0;
+}
+
+.nearby-stations-row::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
+.nearby-station-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: var(--btn-bg);
+  border: 1px solid var(--btn-border);
+  border-radius: 20px;
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 0.76rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  flex-shrink: 0;
+  max-width: 160px;
+}
+
+.nearby-station-chip:hover {
+  background: var(--btn-hover-bg);
+  border-color: var(--btn-hover-border);
+  color: var(--text-primary);
+}
+
+.nearby-station-chip:active {
+  transform: scale(0.95);
+}
+
+.nearby-station-chip .chip-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nearby-station-chip .chip-dist {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: var(--badge-default-bg);
+  padding: 1px 6px;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+/* Mobile responsive padding adjustments */
+@media (max-width: 480px) {
+  .nearby-stations-row {
+    padding: 8px 12px;
+    gap: 6px;
+  }
+  .nearby-station-chip {
+    padding: 5px 10px;
+    font-size: 0.72rem;
+  }
+}

@@ -28,6 +28,7 @@ router.get('/', async (req, res) => {
   try {
     const url = new URL(COMPLETION_API);
     url.searchParams.set('show_ids', '1');
+    url.searchParams.set('show_coordinates', '1');
 
     if (text) {
       url.searchParams.set('term', text);
@@ -53,6 +54,8 @@ router.get('/', async (req, res) => {
       if (item.id) station.id = item.id;
       if (item.iconclass) station.iconclass = item.iconclass;
       if (item.dist != null) station.dist = item.dist;
+      if (item.lat != null) station.lat = item.lat;
+      if (item.lon != null) station.lon = item.lon;
       return station;
     });
 
