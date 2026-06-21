@@ -126,6 +126,7 @@ export default function App() {
   const [bookmarks, setBookmarks] = useState(loadBookmarks);
   const [recentAccesses, setRecentAccesses] = useState(loadRecent);
   const [userLocation, setUserLocation] = useState(null);
+  const [closestApiStations, setClosestApiStations] = useState([]);
   const menuRef = useRef(null);
   const hiddenAtRef = useRef(null);
   const resolvingIdsRef = useRef(new Set());
@@ -169,6 +170,40 @@ export default function App() {
   useEffect(() => {
     getPosition();
   }, [getPosition]);
+
+  // Fetch closest API stations when userLocation is updated
+  useEffect(() => {
+    if (!userLocation?.lat || !userLocation?.lon) return;
+
+    const controller = new AbortController();
+    const latlon = `${userLocation.lat},${userLocation.lon}`;
+    const params = new URLSearchParams({ latlon });
+
+    fetch(`/search?${params}`, { signal: controller.signal })
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
+      .then((data) => {
+        const stationsOnly = (data || [])
+          .filter(item => item.id)
+          .map(item => ({
+            id: item.id,
+            name: item.label,
+            lat: item.lat,
+            lon: item.lon,
+            dist: item.dist
+          }));
+        setClosestApiStations(stationsOnly);
+      })
+      .catch((err) => {
+        if (err.name !== 'AbortError') {
+          console.error('Error fetching closest stations:', err);
+        }
+      });
+
+    return () => controller.abort();
+  }, [userLocation]);
 
   // Geolocation on background return (> 1 minute)
   useEffect(() => {
@@ -599,6 +634,15 @@ export default function App() {
       </header>
 
       {(() => {
+        const currentId = currentStation.id;
+        const currentName = currentStation.name;
+
+        // Filter API stations to get the closest two (excluding current station)
+        const apiCandidates = closestApiStations.filter(s => 
+          !isSameStation(s.id, s.name, currentId, currentName)
+        );
+        const top2Api = apiCandidates.slice(0, 2);
+
         const recentStations = recentAccesses
           .filter(entry => entry.type === 'station')
           .map(entry => ({ id: entry.id, name: entry.name, lat: entry.lat, lon: entry.lon }));
@@ -633,10 +677,12 @@ export default function App() {
           combined.push(s);
         }
 
-        // Filter out current active station using isSameStation (which checks name & normalized ID)
-        const candidates = combined.filter(s => 
-          !isSameStation(s.id, s.name, currentStation.id, currentStation.name)
-        );
+        // Filter out current active station and the top 2 API stations
+        const candidates = combined.filter(s => {
+          const isCurrent = isSameStation(s.id, s.name, currentId, currentName);
+          const inTop2Api = top2Api.some(api => isSameStation(api.id, api.name, s.id, s.name));
+          return !isCurrent && !inTop2Api;
+        });
 
         const userLat = userLocation?.lat;
         const userLon = userLocation?.lon;
@@ -656,13 +702,14 @@ export default function App() {
           return a.name.localeCompare(b.name);
         });
 
-        const top10Nearby = sortedCandidates.slice(0, 10);
+        const top8Rest = sortedCandidates.slice(0, 10 - top2Api.length);
+        const top10Nearby = [...top2Api, ...top8Rest];
 
         if (current.view === 'station' && top10Nearby.length > 0) {
           return (
             <div className="nearby-stations-row" id="nearby-stations-row">
               {top10Nearby.map((station) => {
-                const hasDist = station.dist !== Infinity;
+                const hasDist = station.dist !== Infinity && station.dist != null;
                 const distText = hasDist
                   ? (station.dist < 1000
                       ? `${Math.round(station.dist)}m`
