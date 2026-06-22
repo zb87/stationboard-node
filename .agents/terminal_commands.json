@@ -1,0 +1,10 @@
+[
+  {
+    "name": "web:build",
+    "command": "npm web:build"
+  },
+  {
+    "name": "start",
+    "command": "npm start"
+  }
+]
