@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { fetchJourneyStops } from '../utils/api.js';
 import { formatTime, getDelayMinutes, formatDelay } from '../utils/time.js';
 import { getServiceColorClass, isPlatformRefinement } from '../utils/service.js';
@@ -240,23 +240,38 @@ function StopRow({ stop, index, isFirst, isLast, position, onStopClick }) {
   );
 }
 
-export default function JourneyDetail({ journey, onBack, onStopClick }) {
+export default function JourneyDetail({ journey, onBack, onStopClick, bgRefreshTrigger }) {
   const [stops, setStops] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isSilentLoading, setIsSilentLoading] = useState(false);
   const [error, setError] = useState(null);
   const [now, setNow] = useState(new Date());
   const [refreshKey, setRefreshKey] = useState(0);
 
-  // Fetch stops on mount
+  const stopsRef = useRef(stops);
+  const isFirstMountRef = useRef(true);
+
+  // Sync stops ref
+  useEffect(() => {
+    stopsRef.current = stops;
+  }, [stops]);
+
+  // Fetch stops on mount / refresh
   useEffect(() => {
     let cancelled = false;
     async function load() {
-      setLoading(true);
+      const isSilent = stopsRef.current.length > 0;
+      if (isSilent) {
+        setIsSilentLoading(true);
+      } else {
+        setLoading(true);
+      }
       setError(null);
       try {
         const data = await fetchJourneyStops(journey.journeyRef, journey.operatingDayRef);
         if (!cancelled) {
           setStops(data);
+          setError(null);
         }
       } catch (err) {
         if (!cancelled) {
@@ -265,12 +280,22 @@ export default function JourneyDetail({ journey, onBack, onStopClick }) {
       } finally {
         if (!cancelled) {
           setLoading(false);
+          setIsSilentLoading(false);
         }
       }
     }
     load();
     return () => { cancelled = true; };
   }, [journey.journeyRef, journey.operatingDayRef, refreshKey]);
+
+  // Trigger silent refresh on background return
+  useEffect(() => {
+    if (isFirstMountRef.current) {
+      isFirstMountRef.current = false;
+      return;
+    }
+    setRefreshKey((k) => k + 1);
+  }, [bgRefreshTrigger]);
 
   // Update "now" every 10s for live train position
   useEffect(() => {
@@ -309,10 +334,14 @@ export default function JourneyDetail({ journey, onBack, onStopClick }) {
           aria-label="Refresh journey"
           id="journey-refresh-btn"
         >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="23 4 23 10 17 10" />
-            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
-          </svg>
+          {isSilentLoading ? (
+            <div className="silent-loader-btn-spinner" />
+          ) : (
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="23 4 23 10 17 10" />
+              <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+            </svg>
+          )}
         </button>
       </div>
 

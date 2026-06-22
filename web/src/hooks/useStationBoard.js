@@ -62,6 +62,7 @@ export function useStationBoard(type, stationId = DEFAULT_STATION_ID) {
   const [journeys, setJourneys] = useState([]);
   const [isLoadingTop, setIsLoadingTop] = useState(false);
   const [isLoadingBottom, setIsLoadingBottom] = useState(false);
+  const [isSilentLoading, setIsSilentLoading] = useState(false);
   const [error, setError] = useState(null);
 
   // Use refs to avoid stale closures in async callbacks
@@ -112,11 +113,16 @@ export function useStationBoard(type, stationId = DEFAULT_STATION_ID) {
   /**
    * Load initial data (current time).
    */
-  const loadInitial = useCallback(async (boardType) => {
-    setIsLoadingBottom(true);
-    setError(null);
+  const loadInitial = useCallback(async (boardType, silent = false) => {
+    if (silent) {
+      setIsSilentLoading(true);
+    } else {
+      setIsLoadingBottom(true);
+      setError(null);
+    }
     try {
       const data = await fetchStationBoard(stationId, boardType);
+      setError(null);
       seenKeys.current.clear();
       for (const j of data) {
         seenKeys.current.add(journeyKey(j));
@@ -127,7 +133,11 @@ export function useStationBoard(type, stationId = DEFAULT_STATION_ID) {
     } catch (err) {
       setError(err.message);
     } finally {
-      setIsLoadingBottom(false);
+      if (silent) {
+        setIsSilentLoading(false);
+      } else {
+        setIsLoadingBottom(false);
+      }
     }
   }, [stationId]);
 
@@ -239,19 +249,24 @@ export function useStationBoard(type, stationId = DEFAULT_STATION_ID) {
     }
   }, [type, stationId, mergeAndSet, hasOverlap]);
 
-  const refresh = useCallback(() => {
-    seenKeys.current.clear();
-    journeysRef.current = [];
-    setJourneys([]);
-    setError(null);
-    loadingRef.current = { top: false, bottom: false };
-    loadInitial(type);
+  const refresh = useCallback((silent = true) => {
+    if (silent) {
+      loadInitial(type, true);
+    } else {
+      seenKeys.current.clear();
+      journeysRef.current = [];
+      setJourneys([]);
+      setError(null);
+      loadingRef.current = { top: false, bottom: false };
+      loadInitial(type);
+    }
   }, [type, loadInitial]);
 
   return {
     journeys,
     isLoadingTop,
     isLoadingBottom,
+    isSilentLoading,
     error,
     loadFuture,
     loadPast,

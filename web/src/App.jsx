@@ -127,9 +127,11 @@ export default function App() {
   const [recentAccesses, setRecentAccesses] = useState(loadRecent);
   const [userLocation, setUserLocation] = useState(null);
   const [closestApiStations, setClosestApiStations] = useState([]);
+  const [bgRefreshTrigger, setBgRefreshTrigger] = useState(0);
   const menuRef = useRef(null);
   const hiddenAtRef = useRef(null);
   const resolvingIdsRef = useRef(new Set());
+  const isFirstMountRef = useRef(true);
 
   // Navigation stack: each entry is { view, station?, journey? }
   const [navStack, setNavStack] = useState(() => [
@@ -139,7 +141,7 @@ export default function App() {
   const current = navStack[navStack.length - 1];
   const currentStation = current.station || DEFAULT_STATION;
 
-  const { journeys, isLoadingTop, isLoadingBottom, error, loadFuture, loadPast, refresh } =
+  const { journeys, isLoadingTop, isLoadingBottom, isSilentLoading, error, loadFuture, loadPast, refresh } =
     useStationBoard(type, currentStation.id);
 
   // Persist the last viewed station whenever it changes
@@ -215,6 +217,7 @@ export default function App() {
         hiddenAtRef.current = null;
         if (elapsed > BG_TIMEOUT_MS) {
           getPosition();
+          setBgRefreshTrigger((prev) => prev + 1);
         }
       }
     }
@@ -223,6 +226,17 @@ export default function App() {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [getPosition]);
+
+  // Trigger silent refresh on background return
+  useEffect(() => {
+    if (isFirstMountRef.current) {
+      isFirstMountRef.current = false;
+      return;
+    }
+    if (current.view === 'station') {
+      refresh(true);
+    }
+  }, [bgRefreshTrigger, current.view, refresh]);
 
   // Background coordinate resolver
   useEffect(() => {
@@ -513,6 +527,7 @@ export default function App() {
           journey={current.journey}
           onBack={handleBack}
           onStopClick={handleStopClick}
+          bgRefreshTrigger={bgRefreshTrigger}
         />
       </div>
     );
@@ -538,27 +553,11 @@ export default function App() {
             )}
             <div className="header-title-group">
               <h1 className="header-station">{currentStation.name}</h1>
+              <span className="header-subtitle">{type === 'departure' ? 'Departures' : 'Arrivals'}</span>
             </div>
           </div>
 
           <div className="header-controls">
-            {/* Departure / Arrival dropdown */}
-            <div className="type-dropdown-wrap">
-              <select
-                id="type-select"
-                className="type-dropdown"
-                value={type}
-                onChange={(e) => setType(e.target.value)}
-                aria-label="Board type"
-              >
-                <option value="departure">Departures</option>
-                <option value="arrival">Arrivals</option>
-              </select>
-              <svg className="type-dropdown-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="6 9 12 15 18 9" />
-              </svg>
-            </div>
-
             {/* Bookmarks button */}
             <button
               className="header-icon-btn"
@@ -569,6 +568,23 @@ export default function App() {
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
               </svg>
+            </button>
+
+            {/* Refresh button in header */}
+            <button
+              className="header-icon-btn"
+              onClick={() => refresh(true)}
+              aria-label="Refresh board"
+              id="header-refresh-btn"
+            >
+              {isSilentLoading ? (
+                <div className="silent-loader-btn-spinner" />
+              ) : (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="23 4 23 10 17 10" />
+                  <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+                </svg>
+              )}
             </button>
 
             {/* 3-dot overflow menu */}
@@ -590,16 +606,42 @@ export default function App() {
               {menuOpen && (
                 <div className="overflow-menu" role="menu" id="overflow-menu">
                   <button
-                    className="overflow-menu-item"
+                    className={`overflow-menu-item ${type === 'departure' ? 'active' : ''}`}
                     role="menuitem"
-                    id="menu-refresh"
-                    onClick={() => { setMenuOpen(false); refresh(); }}
+                    id="menu-type-departure"
+                    onClick={() => { setMenuOpen(false); setType('departure'); }}
                   >
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="23 4 23 10 17 10" />
-                      <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      style={{ visibility: type === 'departure' ? 'visible' : 'hidden' }}
+                    >
+                      <polyline points="20 6 9 17 4 12" />
                     </svg>
-                    Refresh
+                    Departures
+                  </button>
+                  <button
+                    className={`overflow-menu-item ${type === 'arrival' ? 'active' : ''}`}
+                    role="menuitem"
+                    id="menu-type-arrival"
+                    onClick={() => { setMenuOpen(false); setType('arrival'); }}
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      style={{ visibility: type === 'arrival' ? 'visible' : 'hidden' }}
+                    >
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                    Arrivals
                   </button>
                   <div className="overflow-menu-divider" />
                   <button

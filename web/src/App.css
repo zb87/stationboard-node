@@ -574,3 +574,16 @@ body {
     font-size: 0.72rem;
   }
 }
+
+/* Silent loader spinner for action buttons */
+.silent-loader-btn-spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
