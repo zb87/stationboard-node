@@ -300,6 +300,47 @@ export default function App() {
     resolveCoordinates();
   }, [bookmarks, recentAccesses]);
 
+  // Synchronize coordinates between bookmarks and recent accesses
+  useEffect(() => {
+    let changedBookmarks = false;
+    let changedRecent = false;
+
+    const nextBookmarks = bookmarks.map(b => {
+      if (b.id && (b.lat == null || b.lon == null)) {
+        const match = recentAccesses.find(r => 
+          r.type === 'station' && isSameStation(r.id, r.name, b.id, b.name) && r.lat != null && r.lon != null
+        );
+        if (match) {
+          changedBookmarks = true;
+          return { ...b, lat: match.lat, lon: match.lon };
+        }
+      }
+      return b;
+    });
+
+    const nextRecent = recentAccesses.map(r => {
+      if (r.type === 'station' && r.id && (r.lat == null || r.lon == null)) {
+        const match = bookmarks.find(b => 
+          isSameStation(b.id, b.name, r.id, r.name) && b.lat != null && b.lon != null
+        );
+        if (match) {
+          changedRecent = true;
+          return { ...r, lat: match.lat, lon: match.lon };
+        }
+      }
+      return r;
+    });
+
+    if (changedBookmarks) {
+      setBookmarks(nextBookmarks);
+      saveBookmarks(nextBookmarks);
+    }
+    if (changedRecent) {
+      setRecentAccesses(nextRecent);
+      saveRecent(nextRecent);
+    }
+  }, [bookmarks, recentAccesses]);
+
   // Close overflow menu when clicking outside
   useEffect(() => {
     if (!menuOpen) return;
