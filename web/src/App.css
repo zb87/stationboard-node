@@ -594,3 +594,32 @@ body {
   flex-shrink: 0;
 }
 
+/* Checkmark success styling & micro-animations */
+.checkmark-icon {
+  color: #10b981; /* Premium Emerald/Success color */
+  animation: checkmarkScale 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.checkmark-icon polyline {
+  stroke-dasharray: 24;
+  stroke-dashoffset: 24;
+  animation: drawCheckmark 0.25s ease-out 0.1s forwards;
+}
+
+@keyframes checkmarkScale {
+  from {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes drawCheckmark {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+

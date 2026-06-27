@@ -144,6 +144,22 @@ export default function App() {
   const { journeys, isLoadingTop, isLoadingBottom, isSilentLoading, error, loadFuture, loadPast, refresh } =
     useStationBoard(type, currentStation.id);
 
+  const [showCheckmark, setShowCheckmark] = useState(false);
+  const prevSilentLoadingRef = useRef(false);
+
+  useEffect(() => {
+    if (prevSilentLoadingRef.current && !isSilentLoading) {
+      if (!error) {
+        setShowCheckmark(true);
+        const timer = setTimeout(() => {
+          setShowCheckmark(false);
+        }, 1000);
+        return () => clearTimeout(timer);
+      }
+    }
+    prevSilentLoadingRef.current = isSilentLoading;
+  }, [isSilentLoading, error]);
+
   // Persist the last viewed station whenever it changes
   useEffect(() => {
     if (current.view === 'station' && currentStation?.id) {
@@ -617,9 +633,14 @@ export default function App() {
               onClick={() => refresh(true)}
               aria-label="Refresh board"
               id="header-refresh-btn"
+              disabled={isSilentLoading}
             >
               {isSilentLoading ? (
                 <div className="silent-loader-btn-spinner" />
+              ) : showCheckmark ? (
+                <svg className="checkmark-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
               ) : (
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="23 4 23 10 17 10" />

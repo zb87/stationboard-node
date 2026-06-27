@@ -247,6 +247,21 @@ export default function JourneyDetail({ journey, onBack, onStopClick, bgRefreshT
   const [error, setError] = useState(null);
   const [now, setNow] = useState(new Date());
   const [refreshKey, setRefreshKey] = useState(0);
+  const [showCheckmark, setShowCheckmark] = useState(false);
+  const prevSilentLoadingRef = useRef(false);
+
+  useEffect(() => {
+    if (prevSilentLoadingRef.current && !isSilentLoading) {
+      if (!error) {
+        setShowCheckmark(true);
+        const timer = setTimeout(() => {
+          setShowCheckmark(false);
+        }, 1000);
+        return () => clearTimeout(timer);
+      }
+    }
+    prevSilentLoadingRef.current = isSilentLoading;
+  }, [isSilentLoading, error]);
 
   const stopsRef = useRef(stops);
   const isFirstMountRef = useRef(true);
@@ -267,8 +282,10 @@ export default function JourneyDetail({ journey, onBack, onStopClick, bgRefreshT
         setLoading(true);
       }
       setError(null);
+      const startTime = Date.now();
       try {
-        const data = await fetchJourneyStops(journey.journeyRef, journey.operatingDayRef);
+        const bypassCache = refreshKey > 0;
+        const data = await fetchJourneyStops(journey.journeyRef, journey.operatingDayRef, bypassCache);
         if (!cancelled) {
           setStops(data);
           setError(null);
@@ -279,8 +296,16 @@ export default function JourneyDetail({ journey, onBack, onStopClick, bgRefreshT
         }
       } finally {
         if (!cancelled) {
-          setLoading(false);
-          setIsSilentLoading(false);
+          if (isSilent) {
+            const elapsed = Date.now() - startTime;
+            if (elapsed < 800) {
+              await new Promise((resolve) => setTimeout(resolve, 800 - elapsed));
+            }
+          }
+          if (!cancelled) {
+            setLoading(false);
+            setIsSilentLoading(false);
+          }
         }
       }
     }
@@ -333,9 +358,14 @@ export default function JourneyDetail({ journey, onBack, onStopClick, bgRefreshT
           onClick={() => setRefreshKey((k) => k + 1)}
           aria-label="Refresh journey"
           id="journey-refresh-btn"
+          disabled={isSilentLoading}
         >
           {isSilentLoading ? (
             <div className="silent-loader-btn-spinner" />
+          ) : showCheckmark ? (
+            <svg className="checkmark-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
           ) : (
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="23 4 23 10 17 10" />

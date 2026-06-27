@@ -32,13 +32,16 @@ async function rateLimit() {
  * - If the same URL is already inflight, reuses the same promise.
  * - If a successful response for the same URL is cached within CACHE_TTL_MS, returns it.
  * @param {string} url
+ * @param {boolean} [bypassCache]
  * @returns {Promise<any>}
  */
-async function dedupedFetch(url) {
+async function dedupedFetch(url, bypassCache = false) {
   // 1. Check cache
-  const cached = cache.get(url);
-  if (cached && Date.now() - cached.time < CACHE_TTL_MS) {
-    return cached.data;
+  if (!bypassCache) {
+    const cached = cache.get(url);
+    if (cached && Date.now() - cached.time < CACHE_TTL_MS) {
+      return cached.data;
+    }
   }
 
   // 2. Check inflight
@@ -78,12 +81,13 @@ async function dedupedFetch(url) {
  * @param {string} stationId
  * @param {'departure'|'arrival'} type
  * @param {string} [timestamp] - ISO 8601 timestamp
+ * @param {boolean} [bypassCache]
  * @returns {Promise<import('./types').Journey[]>}
  */
-export async function fetchStationBoard(stationId, type, timestamp) {
+export async function fetchStationBoard(stationId, type, timestamp, bypassCache = false) {
   const params = timestamp ? `?timestamp=${encodeURIComponent(timestamp)}` : '';
   const url = `${API_BASE}/station/${encodeURIComponent(stationId)}/${type}${params}`;
-  return dedupedFetch(url);
+  return dedupedFetch(url, bypassCache);
 }
 
 /**
@@ -91,11 +95,12 @@ export async function fetchStationBoard(stationId, type, timestamp) {
  * Deduplicates identical inflight requests and caches responses for 5s.
  * @param {string} journeyRef
  * @param {string} operatingDayRef
+ * @param {boolean} [bypassCache]
  * @returns {Promise<import('./types').Stop[]>}
  */
-export async function fetchJourneyStops(journeyRef, operatingDayRef) {
+export async function fetchJourneyStops(journeyRef, operatingDayRef, bypassCache = false) {
   const url = `${API_BASE}/journey/${encodeURIComponent(journeyRef)}/${encodeURIComponent(operatingDayRef)}`;
-  return dedupedFetch(url);
+  return dedupedFetch(url, bypassCache);
 }
 
 /**

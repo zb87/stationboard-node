@@ -113,15 +113,16 @@ export function useStationBoard(type, stationId = DEFAULT_STATION_ID) {
   /**
    * Load initial data (current time).
    */
-  const loadInitial = useCallback(async (boardType, silent = false) => {
+  const loadInitial = useCallback(async (boardType, silent = false, bypassCache = false) => {
     if (silent) {
       setIsSilentLoading(true);
     } else {
       setIsLoadingBottom(true);
       setError(null);
     }
+    const startTime = Date.now();
     try {
-      const data = await fetchStationBoard(stationId, boardType);
+      const data = await fetchStationBoard(stationId, boardType, null, bypassCache);
       setError(null);
       seenKeys.current.clear();
       for (const j of data) {
@@ -134,6 +135,10 @@ export function useStationBoard(type, stationId = DEFAULT_STATION_ID) {
       setError(err.message);
     } finally {
       if (silent) {
+        const elapsed = Date.now() - startTime;
+        if (elapsed < 800) {
+          await new Promise((resolve) => setTimeout(resolve, 800 - elapsed));
+        }
         setIsSilentLoading(false);
       } else {
         setIsLoadingBottom(false);
@@ -251,14 +256,14 @@ export function useStationBoard(type, stationId = DEFAULT_STATION_ID) {
 
   const refresh = useCallback((silent = true) => {
     if (silent) {
-      loadInitial(type, true);
+      loadInitial(type, true, true);
     } else {
       seenKeys.current.clear();
       journeysRef.current = [];
       setJourneys([]);
       setError(null);
       loadingRef.current = { top: false, bottom: false };
-      loadInitial(type);
+      loadInitial(type, false, true);
     }
   }, [type, loadInitial]);
 
