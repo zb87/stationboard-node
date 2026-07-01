@@ -1,29 +1,118 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
-  <!-- Background -->
-  <rect width="512" height="512" rx="96" fill="#0a0e1a"/>
-  
-  <!-- Train body -->
-  <rect x="128" y="138" width="256" height="192" rx="32" fill="#ffffff"/>
-  
-  <!-- Window row -->
-  <rect x="154" y="164" width="75" height="58" rx="10" fill="#0a0e1a"/>
-  <rect x="283" y="164" width="75" height="58" rx="10" fill="#0a0e1a"/>
-  
-  <!-- Red stripe across train body -->
-  <rect x="128" y="244" width="256" height="22" fill="#EB0000"/>
-  
-  <!-- Door -->
-  <rect x="234" y="164" width="44" height="102" rx="8" fill="#0a0e1a"/>
-  
-  <!-- Wheels -->
-  <circle cx="192" cy="352" r="22" fill="#ffffff"/>
-  <circle cx="320" cy="352" r="22" fill="#ffffff"/>
-  <circle cx="192" cy="352" r="10" fill="#0a0e1a"/>
-  <circle cx="320" cy="352" r="10" fill="#0a0e1a"/>
-  
-  <!-- Rail -->
-  <rect x="85" y="368" width="342" height="10" rx="5" fill="#EB0000"/>
-  
-  <!-- Headlight -->
-  <circle cx="394" cy="202" r="14" fill="#f0c040"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <!-- Background Gradient -->
+    <radialGradient id="bg-grad" cx="50%" cy="40%" r="65%">
+      <stop offset="0%" stop-color="#1a2544" />
+      <stop offset="60%" stop-color="#0a0e1a" />
+      <stop offset="100%" stop-color="#05070f" />
+    </radialGradient>
+    
+    <!-- Metallic Border Gradient -->
+    <linearGradient id="border-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.2" />
+      <stop offset="50%" stop-color="#2c3e6b" stop-opacity="0.4" />
+      <stop offset="100%" stop-color="#0a0e1a" stop-opacity="0.9" />
+    </linearGradient>
+
+    <!-- Windshield Reflection -->
+    <linearGradient id="windshield-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#1f2c4d" />
+      <stop offset="100%" stop-color="#0a0e1b" />
+    </linearGradient>
+    <linearGradient id="glass-reflection" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.2" />
+      <stop offset="30%" stop-color="#ffffff" stop-opacity="0.05" />
+      <stop offset="31%" stop-color="#ffffff" stop-opacity="0" />
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0" />
+    </linearGradient>
+    
+    <!-- Red Accent Gradient -->
+    <linearGradient id="red-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ff2e2e" />
+      <stop offset="100%" stop-color="#b30000" />
+    </linearGradient>
+    
+    <!-- Headlight Glow Filter -->
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="12" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+    
+    <radialGradient id="light-glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#fffbeb" stop-opacity="1" />
+      <stop offset="35%" stop-color="#f59e0b" stop-opacity="0.7" />
+      <stop offset="100%" stop-color="#f59e0b" stop-opacity="0" />
+    </radialGradient>
+  </defs>
+
+  <!-- Outer Ring (Clock Motif) -->
+  <circle cx="256" cy="256" r="215" fill="none" stroke="#2c3e6b" stroke-width="2.5" stroke-dasharray="2 12" stroke-opacity="0.6" />
+  <circle cx="256" cy="256" r="198" fill="none" stroke="#4a5270" stroke-width="2" stroke-opacity="0.3" />
+
+  <!-- Tracks Perspective -->
+  <g opacity="0.8">
+    <!-- Rails in SBB Red -->
+    <line x1="146" y1="512" x2="226" y2="340" stroke="#eb0000" stroke-width="6" stroke-linecap="round" />
+    <line x1="366" y1="512" x2="286" y2="340" stroke="#eb0000" stroke-width="6" stroke-linecap="round" />
+    <!-- Ties / Sleepers -->
+    <line x1="168" y1="470" x2="344" y2="470" stroke="#4a5270" stroke-width="4.5" opacity="0.7" />
+    <line x1="186" y1="430" x2="326" y2="430" stroke="#4a5270" stroke-width="4" opacity="0.6" />
+    <line x1="202" y1="395" x2="310" y2="395" stroke="#4a5270" stroke-width="3.5" opacity="0.5" />
+    <line x1="216" y1="365" x2="296" y2="365" stroke="#4a5270" stroke-width="3" opacity="0.4" />
+  </g>
+
+  <!-- Train Group (Scaled up to make the train bigger) -->
+  <g transform="translate(-76.8, -60) scale(1.3)">
+    <!-- Shadow under the train -->
+    <ellipse cx="256" cy="375" rx="95" ry="12" fill="#000000" opacity="0.75" filter="blur(10px)" />
+
+    <!-- Train Body / Chassis (Red and White) -->
+    <!-- Base Shape (White) -->
+    <path d="M168 355 L178 225 C178 190, 200 160, 256 160 C312 160, 334 190, 334 225 L344 355 Z" fill="#ffffff" stroke="#0a0e1a" stroke-width="4" stroke-linejoin="round" />
+    
+    <!-- Red Nose Section -->
+    <path d="M170 325 C170 325, 208 320, 256 320 C304 320, 342 325, 342 325 L344 355 L168 355 Z" fill="url(#red-grad)" />
+    
+    <!-- Nose Accent Curve (Bottom Red Cover) -->
+    <path d="M188 355 L208 372 L304 372 L324 355 Z" fill="#990000" />
+    <path d="M208 372 L218 380 L294 380 L304 372 Z" fill="#4d0000" />
+
+    <!-- Windshield -->
+    <path d="M190 220 L208 175 C213 170, 220 170, 256 170 C292 170, 299 170, 304 175 L322 220 C325 227, 320 231, 312 231 L200 231 C192 231, 187 227, 190 220 Z" fill="url(#windshield-grad)" stroke="#0a0e1a" stroke-width="2" />
+    
+    <!-- Windshield Glass Reflection overlay -->
+    <path d="M190 220 L208 175 C213 170, 220 170, 256 170 C292 170, 299 170, 304 175 L322 220 C325 227, 320 231, 312 231 L200 231 C192 231, 187 227, 190 220 Z" fill="url(#glass-reflection)" pointer-events="none" />
+
+    <!-- Destination Display / Station Board -->
+    <rect x="218" y="178" width="76" height="13" rx="2" fill="#000000" stroke="#f59e0b" stroke-width="1" opacity="0.9" />
+    <!-- Glowing orange dots mimicking characters -->
+    <line x1="223" y1="184" x2="289" y2="184" stroke="#f59e0b" stroke-width="2.5" stroke-dasharray="3.5 2" />
+
+    <!-- Black Divider lines / Panels -->
+    <path d="M178 225 L334 225" stroke="#e2e8f0" stroke-width="2.5" />
+    <path d="M174 275 C208 265, 256 265, 256 265 C256 265, 304 265, 338 275" fill="none" stroke="#e2e8f0" stroke-width="2.5" />
+
+    <!-- Headlights -->
+    <!-- Top Light -->
+    <circle cx="256" cy="150" r="7.5" fill="#ffffff" filter="url(#glow)" />
+    <circle cx="256" cy="150" r="16" fill="url(#light-glow)" pointer-events="none" />
+
+    <!-- Bottom Left Light -->
+    <path d="M182 300 L202 297 L200 307 L184 307 Z" fill="#ffffff" filter="url(#glow)" />
+    <circle cx="192" cy="302" r="18" fill="url(#light-glow)" pointer-events="none" />
+
+    <!-- Bottom Right Light -->
+    <path d="M330 300 L310 297 L312 307 L328 307 Z" fill="#ffffff" filter="url(#glow)" />
+    <circle cx="320" cy="302" r="18" fill="url(#light-glow)" pointer-events="none" />
+
+    <!-- Red Swiss Cross on Nose -->
+    <rect x="250" y="273" width="12" height="12" rx="2" fill="#eb0000" />
+    <path d="M256 275 L256 283 M252 279 L260 279" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" />
+  </g>
+
+  <!-- High-tech subtle grid scanlines on the background (adds depth to PWA logo) -->
+  <rect x="30" y="30" width="452" height="452" rx="82" fill="none" stroke="rgba(255, 255, 255, 0.02)" stroke-width="40" pointer-events="none" />
 </svg>
