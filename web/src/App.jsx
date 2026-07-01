@@ -740,10 +740,28 @@ export default function App() {
       {(() => {
         const currentId = currentStation.id;
         const currentName = currentStation.name;
+        const userLat = userLocation?.lat;
+        const userLon = userLocation?.lon;
 
-        // Filter API stations to get the closest two (excluding current station)
+        // 1. Identify if there is a special bookmark within 500m (excluding current station)
+        let specialBookmark = null;
+        if (userLat != null && userLon != null) {
+          for (const b of bookmarks) {
+            if (isSameStation(b.id, b.name, currentId, currentName)) continue;
+            if (b.lat != null && b.lon != null) {
+              const dist = getDistance(userLat, userLon, b.lat, b.lon);
+              if (dist <= 500) {
+                specialBookmark = { ...b, dist };
+                break; // Put only the first matching bookmark
+              }
+            }
+          }
+        }
+
+        // Filter API stations to get the closest two (excluding current station and the special bookmark if it exists)
         const apiCandidates = closestApiStations.filter(s => 
-          !isSameStation(s.id, s.name, currentId, currentName)
+          !isSameStation(s.id, s.name, currentId, currentName) &&
+          !(specialBookmark && isSameStation(s.id, s.name, specialBookmark.id, specialBookmark.name))
         );
         const top2Api = apiCandidates.slice(0, 2);
 
@@ -781,15 +799,13 @@ export default function App() {
           combined.push(s);
         }
 
-        // Filter out current active station and the top 2 API stations
+        // Filter out current active station, the top 2 API stations, and the special bookmark
         const candidates = combined.filter(s => {
           const isCurrent = isSameStation(s.id, s.name, currentId, currentName);
           const inTop2Api = top2Api.some(api => isSameStation(api.id, api.name, s.id, s.name));
-          return !isCurrent && !inTop2Api;
+          const isSpecial = specialBookmark && isSameStation(s.id, s.name, specialBookmark.id, specialBookmark.name);
+          return !isCurrent && !inTop2Api && !isSpecial;
         });
-
-        const userLat = userLocation?.lat;
-        const userLon = userLocation?.lon;
 
         const sortedCandidates = candidates.map(s => {
           let dist = Infinity;
@@ -806,8 +822,16 @@ export default function App() {
           return a.name.localeCompare(b.name);
         });
 
-        const top8Rest = sortedCandidates.slice(0, 10 - top2Api.length);
-        const top10Nearby = [...top2Api, ...top8Rest];
+        let top10Nearby = [];
+        if (specialBookmark) {
+          const maxRest = 9; // 10 total - 1 specialBookmark
+          const apiPart = top2Api;
+          const restPart = sortedCandidates.slice(0, maxRest - apiPart.length);
+          top10Nearby = [specialBookmark, ...apiPart, ...restPart];
+        } else {
+          const restPart = sortedCandidates.slice(0, 10 - top2Api.length);
+          top10Nearby = [...top2Api, ...restPart];
+        }
 
         if (current.view === 'station' && top10Nearby.length > 0) {
           return (
