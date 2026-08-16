@@ -1,4 +1,53 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import sharp from 'sharp';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// 1. Standalone Favicon SVG (64x64 viewBox - ultra clear at 16/32/64px)
+const faviconSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <!-- Rounded Base Background for Favicon Tab Visibility -->
+  <rect width="64" height="64" rx="14" fill="#0f172a"/>
+  
+  <!-- Pantograph -->
+  <path d="M26 14 L32 9 L38 14 M32 9 L32 7 M27 7 L37 7" fill="none" stroke="#94a3b8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Train Body (White/Silver) -->
+  <rect x="16" y="14" width="32" height="36" rx="6" fill="#ffffff"/>
+
+  <!-- Windshield -->
+  <rect x="19" y="19" width="26" height="13" rx="2.5" fill="#0a0e1a"/>
+  <!-- Destination display (Amber LED) -->
+  <rect x="23" y="21" width="18" height="2.5" rx="0.5" fill="#f59e0b"/>
+
+  <!-- SBB Red Front Apron -->
+  <path d="M16 35 Q16 50 32 50 Q48 50 48 35 Z" fill="#eb0000"/>
+
+  <!-- Headlights -->
+  <!-- Top central light -->
+  <circle cx="32" cy="16.5" r="1.2" fill="#ffffff"/>
+  <!-- Lower left headlight -->
+  <circle cx="22" cy="42" r="2.2" fill="#ffffff"/>
+  <!-- Lower right headlight -->
+  <circle cx="42" cy="42" r="2.2" fill="#ffffff"/>
+
+  <!-- Swiss emblem cross -->
+  <rect x="30.5" y="40.5" width="3" height="3" rx="0.5" fill="#ffffff"/>
+  <path d="M32 41 L32 43 M31 42 L33 42" stroke="#eb0000" stroke-width="0.8" stroke-linecap="round"/>
+
+  <!-- Ground Rail & Under-chassis -->
+  <rect x="22" y="50" width="20" height="3" rx="1" fill="#334155"/>
+  <line x1="10" y1="57" x2="54" y2="57" stroke="#64748b" stroke-width="2.5" stroke-linecap="round"/>
+</svg>
+`;
+
+// 2. Full-scale App Icon SVG (512x512 viewBox)
+function createAppIconSvg(size, isAppleTouch = false) {
+  const bgCornerRadius = isAppleTouch ? 0 : 112; // Apple touch icons should have solid background (OS handles squircle masking)
+  
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="${size}" height="${size}">
   <defs>
     <!-- Background Gradient -->
     <radialGradient id="bg-grad" cx="50%" cy="35%" r="75%">
@@ -42,7 +91,7 @@
   </defs>
 
   <!-- App Badge Background -->
-  <rect width="512" height="512" rx="112" fill="url(#bg-grad)" />
+  <rect width="512" height="512" rx="${bgCornerRadius}" fill="url(#bg-grad)" />
 
   <!-- Subtle Outer Clock/Dial Ring (Subtle nod to railway station clock) -->
   <circle cx="256" cy="256" r="236" fill="none" stroke="#334155" stroke-width="1.5" stroke-dasharray="3 9" opacity="0.4" />
@@ -111,3 +160,51 @@
   <circle cx="160" cy="414" r="10" fill="#334155" />
   <circle cx="352" cy="414" r="10" fill="#334155" />
 </svg>
+`;
+}
+
+async function main() {
+  const publicDir = path.join(__dirname, 'public');
+  const distDir = path.join(__dirname, 'dist');
+
+  const files = [
+    { name: 'favicon.svg', content: faviconSvg },
+    { name: 'icon-192.svg', content: createAppIconSvg(192, false) },
+    { name: 'icon-512.svg', content: createAppIconSvg(512, false) },
+    { name: 'apple-touch-icon.svg', content: createAppIconSvg(180, true) }
+  ];
+
+  // Write SVGs to public/
+  for (const f of files) {
+    fs.writeFileSync(path.join(publicDir, f.name), f.content, 'utf8');
+    console.log(`Wrote ${f.name} to public/`);
+  }
+
+  // Generate apple-touch-icon.png using Sharp from apple-touch-icon.svg
+  const appleSvgContent = createAppIconSvg(512, true);
+  await sharp(Buffer.from(appleSvgContent))
+    .resize(180, 180)
+    .png()
+    .toFile(path.join(publicDir, 'apple-touch-icon.png'));
+  console.log('Generated public/apple-touch-icon.png (180x180)');
+
+  // If dist exists, also update dist/
+  if (fs.existsSync(distDir)) {
+    for (const f of files) {
+      fs.writeFileSync(path.join(distDir, f.name), f.content, 'utf8');
+      console.log(`Wrote ${f.name} to dist/`);
+    }
+    await sharp(Buffer.from(appleSvgContent))
+      .resize(180, 180)
+      .png()
+      .toFile(path.join(distDir, 'apple-touch-icon.png'));
+    console.log('Generated dist/apple-touch-icon.png (180x180)');
+  }
+
+  console.log('All icons generated successfully!');
+}
+
+main().catch(err => {
+  console.error(err);
+  process.exit(1);
+});
